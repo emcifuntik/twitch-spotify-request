@@ -1,0 +1,20 @@
+{
+  "name": "spotify-requests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsc && node --experimental-specifier-resolution=node dist/index"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@twurple/auth": "^5.2.0",
+    "@twurple/chat": "^5.2.0",
+    "@twurple/pubsub": "^5.2.0",
+    "@types/node": "^18.6.4",
+    "dotenv": "^16.0.1",
+    "got": "^12.3.1"
+  },
+  "type": "module"
+}

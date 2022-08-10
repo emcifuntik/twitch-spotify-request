@@ -1,106 +1,117 @@
-import got, { Method, OptionsOfJSONResponseBody } from 'got';
+import got from 'got';
+import { EventEmitter } from 'node:events';
+import { Streamer } from './db/models/streamer';
 
-export class SpotifyAPI {
+export class SpotifyAPI extends EventEmitter {
   private token: string;
+  private refreshToken: string;
   private static API_HOSTNAME: string = 'https://api.spotify.com/v1/';
-  constructor(token: string) {
+  constructor(token: string, refreshToken: string) {
+    super();
     this.token = token;
+    this.refreshToken = refreshToken;
   }
 
-  private async httpRequestGet(route: string, query: Record<string, any> = {}) {
-    const gotOptions: OptionsOfJSONResponseBody = {
-      throwHttpErrors: false,
-      method: 'GET',
-      responseType: 'json',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
+  private async refreshTokens() {
+    const refreshTokenResult = await this.httpClient.post('https://accounts.spotify.com/api/token', {
+      headers: { 'Authorization': 'Basic ' + (Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64')) },
+      form: {
+        grant_type: 'refresh_token',
+        refresh_token: this.refreshToken
       },
-      searchParams: query
-    };
-
-    const response = await got(`${SpotifyAPI.API_HOSTNAME}${route}`, gotOptions);
-    return response.body as Record<string, any>;
-  }
-
-  private async httpRequestPut(route: string, query: Record<string, any> = {}) {
-    const gotOptions: OptionsOfJSONResponseBody = {
-      throwHttpErrors: false,
-      method: 'PUT',
-      responseType: 'json',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      },
-      searchParams: query
-    };
-
-    const response = await got(`${SpotifyAPI.API_HOSTNAME}${route}`, gotOptions);
-    return response.body as Record<string, any>;
-  }
-
-  private async httpRequestPost(route: string, query: Record<string, any> = {}, payload: Record<string, any> = {}) {
-    const gotOptions: OptionsOfJSONResponseBody = {
-      throwHttpErrors: false,
-      method: 'POST',
-      responseType: 'json',
-      headers: {
-        'Authorization': `Bearer ${this.token}`
-      },
-      searchParams: query,
-      json: payload
-    };
-
-    const response = await got(`${SpotifyAPI.API_HOSTNAME}${route}`, gotOptions);
-    return response.body as Record<string, any>;
-  }
-
-  public async searchQuery(queryText: string) {
-    const searchResult = await this.httpRequestGet('search', {
-      q: queryText,
-      type: 'track'
+      responseType: 'json'
     });
 
-    console.log(searchResult);
-
-    return searchResult;
+    const responseBody = refreshTokenResult.body as Record<string, any>;
+    this.token = responseBody.access_token;
+    this.emit('tokenUpdated', responseBody.access_token)
   }
 
-  public async enqueueTrack(trackUri: string) {
-    const enqueueResult = await this.httpRequestPost('me/player/queue', {
-      uri: trackUri
+  private get httpClient() {
+    return got.extend({
+      throwHttpErrors: false,
+      responseType: 'json',
+      headers: {
+        'Authorization': `Bearer ${this.token}`
+      },
+      hooks: {
+        afterResponse: [
+          async (response, retryWithMergedOptions) => {
+            // Unauthorized
+            if (response.statusCode === 401) {
+              // Refresh the access token
+              await this.refreshTokens();
+              const updatedOptions = {
+                headers: {
+                  'Authorization': `Bearer ${this.token}`
+                }
+              };
+              // Make a new retry
+              return retryWithMergedOptions(updatedOptions);
+            }
+    
+            // No changes otherwise
+            return response;
+          }
+        ],
+      }
+    });
+  }
+
+  public async searchQuery(queryText: string): Promise<any> {
+    const searchResult = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'search', {
+      searchParams: {
+        q: queryText,
+        type: 'track'
+      }
     });
 
-    console.log(enqueueResult);
-
-    return enqueueResult;
+    return searchResult.body;
   }
 
-  public async nextTrack() {
-    const skipResult = await this.httpRequestPost('me/player/next');
-    return skipResult;
+  public async enqueueTrack(trackUri: string): Promise<any> {
+    const enqueueResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/queue', {
+      json: {
+        uri: trackUri
+      }
+    });
+
+    return enqueueResult.body;
   }
 
-  public async previousTrack() {
-    const prevTrackResult = await this.httpRequestPost('me/player/previous');
-    return prevTrackResult;
+  public async nextTrack(): Promise<any> {
+    const skipResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/next');
+    return skipResult.body;
   }
 
-  public async getRecentlyPlayed(count: number) {
-    const prevTracks = await this.httpRequestGet('me/player/recently-played', {limit: count});
-    return prevTracks;
+  public async previousTrack(): Promise<any> {
+    const prevTrackResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/previous');
+    return prevTrackResult.body;
   }
 
-  public async getCurrentTrack() {
-    const currentTrack = await this.httpRequestGet('me/player/currently-playing');
-    return currentTrack;
+  public async getRecentlyPlayed(count: number): Promise<any> {
+    const prevTracks = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'me/player/recently-played', {
+      searchParams: {limit: count}
+    });
+    return prevTracks.body;
   }
 
-  public async getTrackById(trackId: string) {
-    const trackInfo = await this.httpRequestGet('tracks/' + trackId);
-    return trackInfo;
+  public async getCurrentTrack(): Promise<any> {
+    const currentTrack = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'me/player/currently-playing');
+    return currentTrack.body;
   }
 
-  public async setPlayerVolume(volume: number) {
-    const volumeChangeResult = await this.httpRequestPut('me/player/volume', { volume_percent: volume.toFixed(0) });
-    return volumeChangeResult;
+  public async getTrackById(trackId: string): Promise<any> {
+    const trackInfo = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'tracks/' + trackId);
+    return trackInfo.body;
+  }
+
+  public async setPlayerVolume(volume: number): Promise<any> {
+    const volumeChangeResult = await this.httpClient.put(SpotifyAPI.API_HOSTNAME + 'me/player/volume', {
+      json: { 
+        volume_percent: volume.toFixed(0) 
+      }
+    });
+    return volumeChangeResult.body;
   }
 }

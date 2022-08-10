@@ -148,45 +148,52 @@ export class RewardListener {
   }
 
   private async onSongRequest(e: EventSubChannelRedemptionAddEvent) {
-    const query = e.input;
-    if (isSpotifyUrl(query)) {
-      const trackId = getTrackIdFromUrl(query);
-      const trackInfo = await this.spotifyClient.getTrackById(trackId);
-      if (trackInfo.uri === undefined) {
-        this.sendMessage(`@${e.userName} ничего не найдено в Spotify`);
-      } else {
-        const uri = trackInfo.uri;
-        if (dupStore.exist(uri)) {
-          this.sendMessage(`@${e.userName} этот трек уже играл за последний час`);
-          return;
+    try {
+      const query = e.input;
+      if (isSpotifyUrl(query)) {
+        const trackId = getTrackIdFromUrl(query);
+        const trackInfo = await this.spotifyClient.getTrackById(trackId);
+        if (trackInfo.uri === undefined) {
+          this.sendMessage(`@${e.userName} ничего не найдено в Spotify`);
+        } else {
+          const uri = trackInfo.uri;
+          if (dupStore.exist(uri)) {
+            this.sendMessage(`@${e.userName} этот трек уже играл за последний час`);
+            return;
+          }
+          const songName = songItemToReadable(trackInfo);
+          const enqueueResult = await this.spotifyClient.enqueueTrack(uri);
+          dupStore.add(uri);
+          this.sendMessage(`@${e.userName} ${songName} добавлена в очередь`);
         }
-        const songName = songItemToReadable(trackInfo);
-        const enqueueResult = await this.spotifyClient.enqueueTrack(uri);
-        dupStore.add(uri);
-        this.sendMessage(`@${e.userName} ${songName} добавлена в очередь`);
-      }
-    } else {
-      const queryResult = await this.spotifyClient.searchQuery(query);
+      } else {
+        const queryResult = await this.spotifyClient.searchQuery(query);
+      
+        if (queryResult.tracks !== undefined && queryResult.tracks.items.length > 0) {
+          const mostRelevant = queryResult.tracks.items[0];
+          const mostRelevantTrackId = mostRelevant.uri;
+          if (dupStore.exist(mostRelevantTrackId)) {
+            this.sendMessage(`@${e.userName} этот трек уже играл за последний час`);
+            return;
+          }
     
-      if (queryResult.tracks !== undefined && queryResult.tracks.items.length > 0) {
-        const mostRelevant = queryResult.tracks.items[0];
-        const mostRelevantTrackId = mostRelevant.uri;
-        if (dupStore.exist(mostRelevantTrackId)) {
-          this.sendMessage(`@${e.userName} этот трек уже играл за последний час`);
-          return;
+          const songName = songItemToReadable(mostRelevant);
+    
+          const enqueueResult = await this.spotifyClient.enqueueTrack(mostRelevantTrackId);
+          console.log(enqueueResult);
+  
+          dupStore.add(mostRelevantTrackId);
+    
+          this.sendMessage(`@${e.userName} ${songName} добавлена в очередь`);
+          await this.apiClient.channelPoints.updateRedemptionStatusByIds(this.streamerTwitchId, e.rewardId, [ e.id ], 'FULFILLED');
+        } else {
+          this.sendMessage(`@${e.userName} ничего не найдено в Spotify`);
+          await this.apiClient.channelPoints.updateRedemptionStatusByIds(this.streamerTwitchId, e.rewardId, [ e.id ], 'CANCELED');
         }
-  
-        const songName = songItemToReadable(mostRelevant);
-  
-        const enqueueResult = await this.spotifyClient.enqueueTrack(mostRelevantTrackId);
-        dupStore.add(mostRelevantTrackId);
-  
-        this.sendMessage(`@${e.userName} ${songName} добавлена в очередь`);
-        await this.apiClient.channelPoints.updateRedemptionStatusByIds(this.streamerTwitchId, e.rewardId, [ e.id ], 'FULFILLED');
-      } else {
-        this.sendMessage(`@${e.userName} ничего не найдено в Spotify`);
-        await this.apiClient.channelPoints.updateRedemptionStatusByIds(this.streamerTwitchId, e.rewardId, [ e.id ], 'CANCELED');
       }
+    }
+    catch(err) {
+      console.error(err);
     }
   }
 

@@ -4,6 +4,11 @@ import { RewardListener } from "./rewardListener";
 const streamers = await Streamer.getAll();
 
 for (let streamer of streamers) {
-  const listener = new RewardListener(streamer);
-  await listener.setup();
+  try {
+    const listener = new RewardListener(streamer);
+    await listener.setup();
+  } catch(err) {
+    console.error(err);
+  }
+  
 }

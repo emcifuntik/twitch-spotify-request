@@ -20,7 +20,6 @@ const requiredScopesSpotify = [
   'user-modify-playback-state',
   'user-read-playback-state',
   'user-read-currently-playing',
-  'user-read-playback-position',
   'user-read-recently-played',
 ];
 

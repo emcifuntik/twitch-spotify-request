@@ -1,4 +1,4 @@
-import got from 'got';
+import got, { Got, OptionsOfJSONResponseBody } from 'got';
 import { EventEmitter } from 'node:events';
 import { Streamer } from './db/models/streamer';
 
@@ -27,10 +27,9 @@ export class SpotifyAPI extends EventEmitter {
     this.emit('tokenUpdated', responseBody.access_token)
   }
 
-  private get httpClient() {
+  private get httpClient(): Got {
     return got.extend({
       throwHttpErrors: false,
-      responseType: 'json',
       headers: {
         'Authorization': `Bearer ${this.token}`
       },
@@ -64,46 +63,45 @@ export class SpotifyAPI extends EventEmitter {
         q: queryText,
         type: 'track'
       }
-    });
+    }).json();
 
-    return searchResult.body;
+    return searchResult;
   }
 
   public async enqueueTrack(trackUri: string): Promise<any> {
     const enqueueResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/queue', {
-      json: {
+      searchParams: {
         uri: trackUri
       }
-    });
-
-    return enqueueResult.body;
+    }).json();
+    return enqueueResult;
   }
 
   public async nextTrack(): Promise<any> {
-    const skipResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/next');
-    return skipResult.body;
+    const skipResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/next').json();
+    return skipResult;
   }
 
   public async previousTrack(): Promise<any> {
-    const prevTrackResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/previous');
-    return prevTrackResult.body;
+    const prevTrackResult = await this.httpClient.post(SpotifyAPI.API_HOSTNAME + 'me/player/previous').json();
+    return prevTrackResult;
   }
 
   public async getRecentlyPlayed(count: number): Promise<any> {
     const prevTracks = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'me/player/recently-played', {
       searchParams: {limit: count}
-    });
-    return prevTracks.body;
+    }).json();
+    return prevTracks;
   }
 
   public async getCurrentTrack(): Promise<any> {
-    const currentTrack = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'me/player/currently-playing');
-    return currentTrack.body;
+    const currentTrack = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'me/player/currently-playing').json();
+    return currentTrack;
   }
 
   public async getTrackById(trackId: string): Promise<any> {
-    const trackInfo = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'tracks/' + trackId);
-    return trackInfo.body;
+    const trackInfo = await this.httpClient.get(SpotifyAPI.API_HOSTNAME + 'tracks/' + trackId).json();
+    return trackInfo;
   }
 
   public async setPlayerVolume(volume: number): Promise<any> {
@@ -111,7 +109,7 @@ export class SpotifyAPI extends EventEmitter {
       json: { 
         volume_percent: volume.toFixed(0) 
       }
-    });
-    return volumeChangeResult.body;
+    }).json();
+    return volumeChangeResult;
   }
 }

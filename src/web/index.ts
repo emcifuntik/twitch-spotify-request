@@ -6,8 +6,8 @@ import router from './routes';
 
 const app = Express();
 
+app.use(Express.static('static'));
 eventSub.apply(app);
-
 app.use(router);
 
 const server = https.createServer({

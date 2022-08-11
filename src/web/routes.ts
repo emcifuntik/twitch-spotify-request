@@ -6,6 +6,7 @@ import { stringify as makeQuery } from 'querystring';
 import got from 'got';
 import { addListener, getListener } from '../twitch/listenAll';
 import { formatTime } from '../utils/formatTime';
+import path from 'path';
 
 const router = Express.Router();
 const redirectURITwitch = process.env.BOT_HOST + 'oauth/twitch';
@@ -94,6 +95,9 @@ router.get('/oauth/twitch', async (req, res, next) => {
 });
 
 router.get('/api/queue/:streamerId', async (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
   const streamerId = req.params.streamerId;
   if (!streamerId || Number.isNaN(+streamerId)) {
     return res.status(400).end('Wrong streamer id');
@@ -113,38 +117,8 @@ router.get('/api/queue/:streamerId', async (req, res, next) => {
   });
 });
 
-router.get('/queue/:streamerId', async (req, res, next) => {
-  const streamerId = req.params.streamerId;
-  if (!streamerId || Number.isNaN(+streamerId)) {
-    return res.status(400).end('Wrong streamer id');
-  }
-  const streamerNumericId = +streamerId;
-
-  const listener = getListener(streamerNumericId);
-  if (!listener) {
-    return res.status(400).end('Streamer does not exist');
-  }
-
-  const queueData = await listener.getQueueData();
-  const prettyQueue = queueData.q.map((value) => {
-    return `${value.songName} (${formatTime(value.timeTillSong)})`;
-  });
-
-  res.header('Cache-Control', 'public, max-age=' + 30);
-  const html = `<html>
-    <head>
-      <title>Songs queue</title>
-      <meta charset="utf-8">
-    </head>
-    <body style="display: flex;align-items: center;flex-direction: column;">
-      <h1>Songs queue</h1>
-      <bold>${queueData.currentSong} (${formatTime(queueData.duration - queueData.progress)})</bold>
-      <ul>
-      ${prettyQueue.map(value => `<li>${value}</li>`).join('\n')}
-      </ul>
-    </body>
-  </html>`;
-  res.status(200).end(html);
+router.use('/queue', async (req, res, next) => {
+  res.sendFile(path.resolve('static/index.html'));
 });
 
 export default router;

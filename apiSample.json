@@ -1,0 +1,64 @@
+{
+  "ts": 1660223963276,
+  "q": {
+    "q": [
+      {
+        "songName": "美波 - カワキヲアメク",
+        "duration": 251933,
+        "uri": "spotify:track:1gUAX2ImxDsB3YDcyxMXlB",
+        "timeTillSong": 210934
+      },
+      {
+        "songName": "Danger - 22:41",
+        "duration": 277209,
+        "uri": "spotify:track:1wvwpqp33lJ90fMOZ9odG3",
+        "timeTillSong": 462867
+      },
+      {
+        "songName": "Deko & Yameii Online - synesthesia!",
+        "duration": 204029,
+        "uri": "spotify:track:5vM8YrpSt5PH7usWXzJqgQ",
+        "timeTillSong": 740076
+      },
+      {
+        "songName": "Dark Heart - Fly",
+        "duration": 199144,
+        "uri": "spotify:track:40TX6kbIsqFfUggyMR3zUW",
+        "timeTillSong": 944105
+      },
+      {
+        "songName": "Сергій Брайлян - Сало",
+        "duration": 314066,
+        "uri": "spotify:track:2O4EqQrqVGUWiAci1pXsYb",
+        "timeTillSong": 1143249
+      },
+      {
+        "songName": "DZIDZIO - Павук",
+        "duration": 179026,
+        "uri": "spotify:track:2aan8Cc8ewI7ABej7xnXJO",
+        "timeTillSong": 1457315
+      },
+      {
+        "songName": "Юзя - Стена",
+        "duration": 153986,
+        "uri": "spotify:track:1QfKMgfvpwNCDS5ehEwFzj",
+        "timeTillSong": 1636341
+      },
+      {
+        "songName": "MORGENSHTERN - ПОСОСИ",
+        "duration": 130465,
+        "uri": "spotify:track:4dgkXOOCKsEKgBgZbAankr",
+        "timeTillSong": 1790327
+      },
+      {
+        "songName": "Володимир Іжицький - Гей, гоп Європа!",
+        "duration": 244853,
+        "uri": "spotify:track:419lniQygPpQecwKUj8K2O",
+        "timeTillSong": 1920792
+      }
+    ],
+    "currentSong": "YG & Jeezy & Rich Homie Quan - My Nigga",
+    "duration": 235632,
+    "progress": 24698
+  }
+}

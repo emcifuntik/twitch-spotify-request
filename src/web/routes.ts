@@ -1,10 +1,11 @@
 import { exchangeCode, getTokenInfo } from '@twurple/auth';
 import Express from 'express';
-import { Streamer } from '../db/models/streamer';
+import { Streamer, StreamerModel } from '../db/models/streamer';
 import { makeid } from '../utils/randomString';
 import { stringify as makeQuery } from 'querystring';
 import got from 'got';
-import { getListener } from '../twitch/listenAll';
+import { addListener, getListener } from '../twitch/listenAll';
+import { formatTime } from '../utils/formatTime';
 
 const router = Express.Router();
 const redirectURITwitch = process.env.BOT_HOST + 'oauth/twitch';
@@ -53,7 +54,9 @@ router.get('/oauth/spotify', async (req, res, next) => {
     return;
   }
 
-  Streamer.updateSpotifyTokens(state, responseData.access_token, responseData.refresh_token);
+  await Streamer.updateSpotifyTokens(state, responseData.access_token, responseData.refresh_token);
+  const streamer: StreamerModel = await Streamer.getBySpotifyState(state) as StreamerModel;
+  addListener(streamer);
   res.status(200).end('OK');
 });
 
@@ -90,6 +93,26 @@ router.get('/oauth/twitch', async (req, res, next) => {
   }
 });
 
+router.get('/api/queue/:streamerId', async (req, res, next) => {
+  const streamerId = req.params.streamerId;
+  if (!streamerId || Number.isNaN(+streamerId)) {
+    return res.status(400).end('Wrong streamer id');
+  }
+  const streamerNumericId = +streamerId;
+
+  const listener = getListener(streamerNumericId);
+  if (!listener) {
+    return res.status(400).end('Streamer does not exist');
+  }
+
+  const queueData = await listener.getQueueData();
+  
+  res.status(200).json({
+    ts: listener.queueUpdateTime,
+    q: queueData
+  });
+});
+
 router.get('/queue/:streamerId', async (req, res, next) => {
   const streamerId = req.params.streamerId;
   if (!streamerId || Number.isNaN(+streamerId)) {
@@ -102,7 +125,11 @@ router.get('/queue/:streamerId', async (req, res, next) => {
     return res.status(400).end('Streamer does not exist');
   }
 
-  const queue = await listener.getFullQueue();
+  const queueData = await listener.getQueueData();
+  const prettyQueue = queueData.q.map((value) => {
+    return `${value.songName} (${formatTime(value.timeTillSong)})`;
+  });
+
   res.header('Cache-Control', 'public, max-age=' + 30);
   const html = `<html>
     <head>
@@ -111,8 +138,9 @@ router.get('/queue/:streamerId', async (req, res, next) => {
     </head>
     <body style="display: flex;align-items: center;flex-direction: column;">
       <h1>Songs queue</h1>
+      <bold>${queueData.currentSong} (${formatTime(queueData.duration - queueData.progress)})</bold>
       <ul>
-      ${queue.map(value => `<li>${value}</li>`).join('\n')}
+      ${prettyQueue.map(value => `<li>${value}</li>`).join('\n')}
       </ul>
     </body>
   </html>`;

@@ -19,6 +19,13 @@ enum ChatCommands {
   SongHelp = '!songhelp'
 }
 
+export interface SongQueueData {
+  q: QueueItem[],
+  currentSong: string,
+  progress: number,
+  duration: number
+}
+
 export class RewardListener {
   private static QUEUE_CALC_DELAY: number = 30000;
   private static ALLOWED_BROADCASTER_TYPES: Set<string> = new Set(['partner', 'affiliate']);
@@ -26,7 +33,7 @@ export class RewardListener {
   private streamerTwitchId: number;
   private streamerId: number;
   private lastQueueCalcTime: number = 0;
-  private lastQueue: string[] = [];
+  private lastQueue: SongQueueData;
   private streamerName: string;
   private streamerNameLastUpdate: number = 0;
 
@@ -244,7 +251,7 @@ export class RewardListener {
     
     if (mods.includes(user) || user == channel.replace('#', '')) {
       this.spotifyClient.setPlayerVolume(volumeLevel);
-      this.sendMessage(`@${user} Звук выставлен на ${volume.toFixed(0)}%`);
+      this.sendMessage(`@${user} звук выставлен на ${volume.toFixed(0)}%`);
     }
   }
 
@@ -262,12 +269,15 @@ export class RewardListener {
     }
 
     const songName = songItemToReadable(currentTrack.item);
-    const message = `@${user} Текущий трек ${songName}`;
+    const message = `@${user} текущий трек ${songName}`;
     this.sendMessage(message);
   }
   
   private async onSongsQueue(channel: string, user: string, args: string[]) {
-    const prettyQueue = await this.getFullQueue();
+    const queueData = await this.getQueueData();
+    const prettyQueue = queueData.q.map((value) => {
+      return `${value.songName} (${formatTime(value.timeTillSong)})`;
+    });
 
     if (prettyQueue.length > 5) {
       this.sendMessage(`@${user} текущая очередь треков: ${prettyQueue.slice(0, 5).join('; ')}. https://catjammusic.com/queue/${this.streamerId}`);
@@ -276,14 +286,23 @@ export class RewardListener {
     }
   }
 
-  public async getFullQueue() {
+  public get queueUpdateTime() {
+    return this.lastQueueCalcTime;
+  }
+
+  public async getQueueData(): Promise<SongQueueData> {
     if (Date.now() - this.lastQueueCalcTime < RewardListener.QUEUE_CALC_DELAY) {
       return this.lastQueue;
     }
 
     const currentTrack = await this.spotifyClient.getCurrentTrack();
     if (currentTrack.item === undefined) {
-      return [];
+      return {
+        q: [],
+        currentSong: '',
+        duration: 0,
+        progress: 0
+      };
     }
 
     const currentProgress = currentTrack.progress_ms;
@@ -299,13 +318,15 @@ export class RewardListener {
       currentWaitTime += q.duration;
     }
 
-    const prettyQueue = queue.map((value) => {
-      return `${value.songName} (${formatTime(value.timeTillSong)})`;
-    });
+    this.lastQueue = {
+      q: queue,
+      currentSong: songItemToReadable(currentTrack.item),
+      duration: duration,
+      progress: currentProgress
+    };
 
-    this.lastQueue = prettyQueue;
     this.lastQueueCalcTime = Date.now();
-    return prettyQueue;
+    return this.lastQueue;
   }
 
   private async onCommand(channel: string, user: string, command: string, args: string[]) {

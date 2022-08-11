@@ -1,4 +1,4 @@
-import { Streamer } from "../db/models/streamer";
+import { Streamer, StreamerModel } from "../db/models/streamer";
 import { RewardListener } from "./rewardListener";
 
 const streamers = await Streamer.getAll();
@@ -6,6 +6,21 @@ const streamers = await Streamer.getAll();
 const listeners: Map<number, RewardListener> = new Map();
 
 for (let streamer of streamers) {
+  try {
+    const listener = new RewardListener(streamer);
+    await listener.setup();
+    listeners.set(streamer.streamer_id, listener);
+  } catch(err) {
+    if (err._statusCode === 400) {
+      // Somebody revoked our application
+      await Streamer.cascadeDelete(streamer.streamer_id);
+    }
+  }
+}
+
+export async function addListener(streamer: StreamerModel) {
+  if (getListener(streamer.streamer_id) !== null) return;
+
   try {
     const listener = new RewardListener(streamer);
     await listener.setup();

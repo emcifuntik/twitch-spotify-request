@@ -40,6 +40,23 @@ export class Streamer {
     });
   }
 
+  public static getBySpotifyState(state: string) {
+    return new Promise((resolve, reject) => {
+      connection.execute('SELECT * FROM `streamer` WHERE `streamer_spotify_state` = ? LIMIT 1', [state], (err, result: RowDataPacket[]) => {
+        if (err) {
+          console.error(err);
+          return reject(err);
+        }
+        
+        if (result.length > 0) {
+          return resolve(result[0]);
+        } else {
+          return resolve(null);
+        }
+      });
+    });
+  }
+
   public static refreshTwitchTokens(streamerId: number, accessToken: string, refreshToken: string) {
     return new Promise((resolve, reject) => {
       connection.execute('UPDATE `streamer` SET `streamer_twitch_token` = ?, `streamer_twitch_refresh` = ? WHERE `streamer_id` = ? LIMIT 1', [accessToken, refreshToken, streamerId], (err, result: ResultSetHeader) => {
@@ -79,7 +96,7 @@ export class Streamer {
     });
   }
 
-  public static getById(streamerId: string) {
+  public static getByTwitchId(streamerId: string) {
     const streamerIdNumber = +streamerId;
 
     return new Promise((resolve, reject) => {

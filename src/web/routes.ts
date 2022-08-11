@@ -4,6 +4,7 @@ import { Streamer } from '../db/models/streamer';
 import { makeid } from '../utils/randomString';
 import { stringify as makeQuery } from 'querystring';
 import got from 'got';
+import { getListener } from '../twitch/listenAll';
 
 const router = Express.Router();
 const redirectURITwitch = process.env.BOT_HOST + 'oauth/twitch';
@@ -18,9 +19,10 @@ const requiredScopesTwitch = [
 
 const requiredScopesSpotify = [
   'user-modify-playback-state',
-  'user-read-playback-state',
   'user-read-currently-playing',
-  'user-read-recently-played',
+  'user-read-playback-position',
+  'user-read-playback-state',
+  'user-read-recently-played'
 ];
 
 router.get('/oauth/spotify', async (req, res, next) => {
@@ -86,6 +88,35 @@ router.get('/oauth/twitch', async (req, res, next) => {
   } catch(err) {
     console.error(err);
   }
+});
+
+router.get('/queue/:streamerId', async (req, res, next) => {
+  const streamerId = req.params.streamerId;
+  if (!streamerId || Number.isNaN(+streamerId)) {
+    return res.status(400).end('Wrong streamer id');
+  }
+  const streamerNumericId = +streamerId;
+
+  const listener = getListener(streamerNumericId);
+  if (!listener) {
+    return res.status(400).end('Streamer does not exist');
+  }
+
+  const queue = await listener.getFullQueue();
+  res.header('Cache-Control', 'public, max-age=' + 30);
+  const html = `<html>
+    <head>
+      <title>Songs queue</title>
+      <meta charset="utf-8">
+    </head>
+    <body style="display: flex;align-items: center;flex-direction: column;">
+      <h1>Songs queue</h1>
+      <ul>
+      ${queue.map(value => `<li>${value}</li>`).join('\n')}
+      </ul>
+    </body>
+  </html>`;
+  res.status(200).end(html);
 });
 
 export default router;

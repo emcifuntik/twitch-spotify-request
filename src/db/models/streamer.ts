@@ -92,5 +92,25 @@ export class Streamer {
         return resolve(result[0]);
       });
     });
-  } 
+  }
+
+  public static cascadeDelete(streamerId: number) {
+    return new Promise((resolve, reject) => {
+      connection.execute('DELETE FROM `rewards` WHERE `reward_streamer` = ?', [streamerId], (err, result) => {
+        if (err) {
+          console.error(err);
+          return reject(err);
+        }
+  
+        connection.execute('DELETE FROM `streamer` WHERE `streamer_id` = ?', [streamerId], (err, result) => {
+          if (err) {
+            console.error(err);
+            return reject(err);
+          }
+    
+          return resolve(true);
+        });
+      });
+    });
+  }
 }

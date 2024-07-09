@@ -73,7 +73,7 @@ export class SpotifyAPI extends EventEmitter {
       searchParams: {
         uri: trackUri
       }
-    }).json();
+    }).text();
     return enqueueResult;
   }
 

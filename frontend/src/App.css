@@ -1,0 +1,842 @@
+/* App-specific styles */
+.App {
+  min-height: 100vh;
+  background: var(--twitch-bg-dark);
+}
+
+main {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+/* Tab Navigation */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  border-radius: 4px 4px 0 0;
+}
+
+.tab:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+  background-color: var(--bg-secondary);
+}
+
+/* Settings Components */
+.settings-section h3,
+.blocks-section h3 {
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 2rem;
+  max-width: 600px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.setting-item label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.setting-item .form-input {
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.setting-item .form-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.setting-item .form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--accent-color);
+}
+
+.checkbox-label:hover {
+  color: var(--accent-color);
+}
+
+/* Blocks Components */
+.blocks-section {
+  max-width: 800px;
+}
+
+.add-block-form {
+  background-color: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color);
+}
+
+.add-block-form h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.add-block-form .flex {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end; /* Ensure bottom alignment */
+  flex-wrap: wrap;
+}
+
+.add-block-form .flex-1 {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-select {
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  min-width: 120px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.blocks-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.block-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  transition: border-color 0.2s ease;
+}
+
+.block-item:hover {
+  border-color: var(--accent-color);
+}
+
+.block-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.block-type {
+  font-size: 1.2rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+}
+
+.block-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.block-target {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.block-type-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: white;
+  border: 1px solid #dc2626;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Toggle Switch Component */
+.toggle-switch {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  min-width: 120px;
+  height: 2.75rem; /* Match input height */
+}
+
+.toggle-switch.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggle-option {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-right: 1px solid var(--border-color);
+}
+
+.toggle-option:last-child {
+  border-right: none;
+}
+
+.toggle-option:hover:not(:disabled) {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.toggle-option.active {
+  background-color: var(--accent-color);
+  color: white;
+  box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.toggle-option.active:hover {
+  background-color: var(--twitch-purple-dark);
+  box-shadow: 0 0 0 1px var(--twitch-purple-dark);
+}
+
+.toggle-option:disabled {
+  cursor: not-allowed;
+}
+
+/* Form Control Alignment */
+.add-block-form .flex {
+  align-items: flex-end; /* Ensure bottom alignment */
+}
+
+.add-block-form .toggle-switch,
+.add-block-form .search-input-container,
+.add-block-form .btn {
+  height: 2.75rem; /* Consistent height for all form controls */
+}
+
+/* Authentication Components */
+.auth-required {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+.auth-required-content {
+  text-align: center;
+  max-width: 400px;
+  padding: 2rem;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.auth-required-content h2 {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.auth-required-content p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+/* Spotify Autocomplete Styles */
+.spotify-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-container .form-input {
+  width: 100%;
+  height: 100%; /* Fill the container height */
+  padding-right: 70px; /* Space for buttons */
+  box-sizing: border-box;
+}
+
+.clear-button {
+  position: absolute;
+  right: 40px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.clear-button:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.search-loading {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-loading .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #1db954;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.search-error {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #fee;
+  color: #c33;
+  padding: 8px 12px;
+  border: 1px solid #fcc;
+  border-radius: 4px;
+  font-size: 14px;
+  z-index: 1000;
+  margin-top: 2px;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 2px;
+}
+
+.search-result {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.search-result:hover,
+.search-result.selected {
+  background-color: #f8f9fa;
+}
+
+.search-result:last-child {
+  border-bottom: none;
+}
+
+.result-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  background-color: #f0f0f0;
+}
+
+.result-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-name {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-info {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.result-type {
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+.result-type-artist {
+  color: #1db954;
+}
+
+.result-type-track {
+  color: #ff6b35;
+}
+
+/* Block UI Enhancements */
+.selected-result {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}
+
+.block-spotify-id {
+  font-size: 12px;
+  color: #999;
+  font-family: monospace;
+  margin-top: 2px;
+}
+
+.add-block-form .flex {
+  align-items: flex-start;
+}
+
+.add-block-form .form-select {
+  min-width: 100px;
+}
+
+.spotify-autocomplete {
+  flex: 1;
+}
+
+/* Time Selector Component */
+.time-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.time-part {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.time-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  min-width: 60px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.time-select:hover {
+  border-color: var(--accent-color);
+  background: var(--bg-primary);
+}
+
+.time-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(145, 70, 255, 0.2);
+}
+
+.time-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-dark);
+}
+
+.time-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: 12px;
+}
+
+.time-selector .time-part:not(:last-child)::after {
+  content: ":";
+  color: var(--text-secondary);
+  margin-left: 0.25rem;
+  font-weight: bold;
+}
+
+/* Settings specific styles */
+.setting-time-picker {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  max-width: 300px;
+}
+
+.setting-item {
+  margin-bottom: 1.5rem;
+}
+
+.setting-item label {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.setting-item .text-muted {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Responsive time selector */
+@media (max-width: 640px) {
+  .time-selector {
+    justify-content: center;
+  }
+  
+  .time-select {
+    min-width: 50px;
+    padding: 0.4rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tabs {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .tab {
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-color);
+    border-right: none;
+  }
+  
+  .tab.active {
+    border-bottom-color: var(--border-color);
+    border-left: 3px solid var(--accent-color);
+  }
+  
+  .add-block-form .flex {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .add-block-form .flex-1 {
+    min-width: unset;
+  }
+  
+  .settings-grid {
+    gap: 1.5rem;
+  }
+}
+
+/* Apple Time Picker Component */
+.apple-time-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(28, 28, 30, 0.8);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(99, 99, 102, 0.3);
+  min-height: 240px; /* Increased to accommodate taller wheels */
+}
+
+.apple-time-picker.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.apple-time-picker.pending-update {
+  opacity: 0.8;
+}
+
+.apple-time-picker.pending-update::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid var(--accent-color);
+  border-radius: 8px;
+  pointer-events: none;
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+.apple-time-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.apple-time-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.apple-time-wheel {
+  position: relative;
+  width: 60px;
+  height: 200px; /* Increased height to show more items */
+  overflow: hidden;
+  cursor: grab;
+  border-radius: 8px;
+  background: rgba(44, 44, 46, 0.8);
+  border: 1px solid rgba(99, 99, 102, 0.2);
+  display: flex;
+  align-items: center; /* Center the content vertically */
+}
+
+.apple-time-wheel:hover {
+  background: rgba(44, 44, 46, 0.9);
+  border-color: rgba(99, 99, 102, 0.4);
+}
+
+.apple-time-wheel.dragging {
+  cursor: grabbing;
+  background: rgba(44, 44, 46, 1);
+}
+
+.apple-time-wheel.disabled {
+  cursor: not-allowed;
+  background: rgba(28, 28, 30, 0.5);
+}
+
+.apple-time-selection-indicator {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 40px;
+  transform: translateY(-50%);
+  background: rgba(0, 122, 255, 0.1);
+  border-top: 1px solid rgba(0, 122, 255, 0.3);
+  border-bottom: 1px solid rgba(0, 122, 255, 0.3);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.apple-time-list {
+  position: relative;
+  width: 100%;
+  /* Position the list so the middle item (index 2) aligns with the center */
+  padding-top: 80px; /* 2 * 40px to push content down so middle item is centered */
+  padding-bottom: 80px; /* 2 * 40px for symmetry */
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.apple-time-wheel.dragging .apple-time-list {
+  transition: none;
+}
+
+.apple-time-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.apple-time-item.selected {
+  color: #ffffff;
+  font-weight: 600;
+  transform: scale(1.1);
+}
+
+.apple-time-item.padding {
+  opacity: 0.3;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.apple-time-item-padding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Add subtle gradient overlays for the wheel effect */
+.apple-time-wheel::before,
+.apple-time-wheel::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 60px; /* Increased gradient height */
+  pointer-events: none;
+  z-index: 3; /* Above selection indicator */
+}
+
+.apple-time-wheel::before {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(44, 44, 46, 1) 0%, rgba(44, 44, 46, 0.8) 50%, transparent 100%);
+}
+
+.apple-time-wheel::after {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(44, 44, 46, 1) 0%, rgba(44, 44, 46, 0.8) 50%, transparent 100%);
+}
+
+/* Apple time picker responsive design */
+@media (max-width: 640px) {
+  .apple-time-picker {
+    gap: 0.75rem;
+    padding: 0.75rem;
+    min-height: 120px;
+  }
+  
+  .apple-time-wheel {
+    width: 50px;
+    height: 100px;
+  }
+  
+  .apple-time-item {
+    height: 33px;
+    font-size: 1rem;
+  }
+  
+  .apple-time-selection-indicator {
+    height: 33px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .apple-time-wheel {
+    cursor: pointer;
+  }
+  
+  .apple-time-wheel:hover {
+    background: rgba(44, 44, 46, 0.8);
+  }
+}

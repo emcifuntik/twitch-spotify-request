@@ -1,0 +1,53 @@
+services:
+  catjammusic:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: twitch-spotify-request
+    environment:
+      DB_HOST: "db"
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      BOT_HOST: ${BOT_HOST}
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      EVENTSUB_SECRET: ${EVENTSUB_SECRET}
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.catjammusic.rule=Host(`catjammusic.com`)"
+      - "traefik.http.routers.catjammusic.entrypoints=websecure"
+      - "traefik.http.routers.catjammusic.tls=true"
+      - "traefik.http.services.catjammusic.loadbalancer.server.port=8080"
+    depends_on:
+      - db
+    networks:
+      - catjam-app-network
+
+  db:
+    image: mariadb:11.7
+    container_name: maria_db
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - catjam-app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  catjam-app-network:
+    driver: bridge
+
+volumes:
+  db-data:

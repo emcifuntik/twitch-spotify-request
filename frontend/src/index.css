@@ -1,0 +1,1160 @@
+/* Twitch-like Dark Theme */
+:root {
+  --twitch-purple: #9146ff;
+  --twitch-purple-dark: #772ce8;
+  --twitch-purple-light: #a970ff;
+  --twitch-bg-dark: #0e0e10;
+  --twitch-bg-medium: #18181b;
+  --twitch-bg-light: #1f1f23;
+  --twitch-text-primary: #efeff1;
+  --twitch-text-secondary: #adadb8;
+  --twitch-text-muted: #6c6c70;
+  --twitch-border: #26262c;
+  --twitch-hover: #2c2c35;
+  --twitch-success: #00f5ff;
+  --twitch-warning: #ff6905;
+  --twitch-error: #f13c20;
+  --twitch-red: #eb0400;
+  --twitch-green: #00ff88;
+  --accent-color: var(--twitch-purple);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--twitch-bg-dark);
+  color: var(--twitch-text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+
+p {
+  margin-bottom: 1rem;
+  color: var(--twitch-text-secondary);
+}
+
+/* Layout */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.gap-3 { gap: 1.5rem; }
+.gap-4 { gap: 2rem; }
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+@media (min-width: 768px) {
+  .md\\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .md\\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Spacing */
+.p-2 { padding: 1rem; }
+.p-3 { padding: 1.5rem; }
+.p-4 { padding: 2rem; }
+
+.m-2 { margin: 1rem; }
+.m-3 { margin: 1.5rem; }
+.m-4 { margin: 2rem; }
+
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
+
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+
+/* Cards */
+.card {
+  background: var(--twitch-bg-medium);
+  border: 1px solid var(--twitch-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  background: var(--twitch-bg-light);
+  border-color: var(--twitch-purple);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 0.5rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--twitch-purple);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--twitch-purple-dark);
+}
+
+.btn-secondary {
+  background: var(--twitch-bg-light);
+  color: var(--twitch-text-primary);
+  border: 1px solid var(--twitch-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--twitch-hover);
+  border-color: var(--twitch-purple);
+}
+
+.btn-success {
+  background: var(--twitch-green);
+  color: var(--twitch-bg-dark);
+}
+
+.btn-success:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-danger {
+  background: var(--twitch-error);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.btn-small {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.btn-large {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* Navigation */
+.navbar {
+  background: var(--twitch-bg-medium);
+  border-bottom: 1px solid var(--twitch-border);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--twitch-text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.nav-link {
+  color: var(--twitch-text-secondary);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--twitch-text-primary);
+  background: var(--twitch-hover);
+}
+
+.nav-link.active {
+  color: var(--twitch-purple);
+  background: rgba(145, 70, 255, 0.1);
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--twitch-text-primary);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--twitch-bg-dark);
+  border: 1px solid var(--twitch-border);
+  border-radius: 4px;
+  color: var(--twitch-text-primary);
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--twitch-purple);
+  box-shadow: 0 0 0 2px rgba(145, 70, 255, 0.2);
+}
+
+.form-input::placeholder {
+  color: var(--twitch-text-muted);
+}
+
+/* Queue Items */
+.queue-item {
+  background: var(--twitch-bg-light);
+  border: 1px solid var(--twitch-border);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+  border-left: 4px solid var(--twitch-purple);
+}
+
+.queue-item:hover {
+  background: var(--twitch-hover);
+}
+
+.queue-item.current {
+  border-left-color: var(--twitch-green);
+  background: rgba(0, 255, 136, 0.05);
+}
+
+.queue-item.current .track-title {
+  color: var(--twitch-green);
+}
+
+.track-title {
+  font-weight: 600;
+  color: var(--twitch-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.track-artist {
+  color: var(--twitch-text-secondary);
+  font-size: 0.875rem;
+}
+
+.track-duration {
+  color: var(--twitch-text-muted);
+  font-size: 0.75rem;
+}
+
+/* Track Images */
+.track-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 1rem;
+}
+
+.track-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Compact Track Images */
+.compact-track-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+}
+
+.compact-track-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Queue Item Layout Updates */
+.queue-item-content {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0; /* Allow text to truncate */
+}
+
+.track-duration {
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+/* Progress Bar */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--twitch-bg-dark);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--twitch-green);
+  transition: width 0.3s ease;
+}
+
+/* Compact Queue Item (for QueueItem component) */
+.queue-item-compact {
+  position: fixed;
+  bottom: 4px; /* Leave space for progress bar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(14, 14, 16, 0.9);
+  border-radius: 8px;
+  z-index: 1000;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  backdrop-filter: blur(10px);
+  min-width: 300px;
+  max-width: 600px;
+}
+
+.queue-item-compact .compact-track-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 1rem;
+}
+
+.queue-item-compact .compact-track-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.queue-item-compact .compact-track-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.queue-item-compact .compact-track-title {
+  font-weight: 600;
+  color: var(--twitch-text-primary);
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-item-compact .compact-track-artist {
+  color: var(--twitch-text-secondary);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-item-compact .compact-progress-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(44, 44, 53, 0.8);
+  z-index: 1001;
+}
+
+.queue-item-compact .compact-progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  transition: width 0.3s ease;
+}
+
+.compact-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--twitch-bg-medium);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.compact-progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  transition: width 0.3s ease;
+}
+
+/* Updated Compact Layout */
+.compact-current-track {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  text-align: left;
+}
+
+.compact-track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.compact-track-info .track-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--twitch-text-primary);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-track-info .track-artist {
+  color: var(--twitch-text-secondary);
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-track-info .track-time {
+  font-size: 0.7rem;
+  color: var(--twitch-text-muted);
+}
+
+/* Compact Queue Page */
+.queue-compact-page {
+  background: transparent; /* Transparent for OBS */
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Make body transparent for compact overlay */
+body:has(.queue-compact-page) {
+  background: transparent;
+}
+
+.compact-loading,
+.compact-error,
+.compact-no-track {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--twitch-text-primary);
+  font-size: 1.1rem;
+}
+
+.compact-error {
+  color: var(--twitch-error);
+}
+
+.compact-no-track {
+  color: var(--twitch-text-secondary);
+}
+
+/* Hide navbar for compact routes */
+.compact-route .navbar {
+  display: none;
+}
+
+.compact-route main {
+  padding: 0;
+}
+
+/* Status Indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-connected {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--twitch-green);
+}
+
+.status-disconnected {
+  background: rgba(241, 60, 32, 0.1);
+  color: var(--twitch-error);
+}
+
+.status-warning {
+  background: rgba(255, 105, 5, 0.1);
+  color: var(--twitch-warning);
+}
+
+/* Loading States */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--twitch-text-muted);
+}
+
+.spinner {
+  border: 2px solid var(--twitch-border);
+  border-top: 2px solid var(--twitch-purple);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Alerts */
+.alert {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.alert-info {
+  background: rgba(145, 70, 255, 0.1);
+  border-left-color: var(--twitch-purple);
+  color: var(--twitch-text-primary);
+}
+
+.alert-success {
+  background: rgba(0, 255, 136, 0.1);
+  border-left-color: var(--twitch-green);
+  color: var(--twitch-text-primary);
+}
+
+.alert-warning {
+  background: rgba(255, 105, 5, 0.1);
+  border-left-color: var(--twitch-warning);
+  color: var(--twitch-text-primary);
+}
+
+.alert-error {
+  background: rgba(241, 60, 32, 0.1);
+  border-left-color: var(--twitch-error);
+  color: var(--twitch-text-primary);
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 300px;
+  max-width: 400px;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: auto;
+  animation: toast-slide-in 0.3s ease-out;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 4px;
+  line-height: 1;
+  transition: opacity 0.2s ease;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+.toast-success {
+  background: rgba(0, 255, 136, 0.9);
+  color: #000;
+}
+
+.toast-error {
+  background: rgba(241, 60, 32, 0.9);
+  color: #fff;
+}
+
+.toast-warning {
+  background: rgba(255, 105, 5, 0.9);
+  color: #000;
+}
+
+.toast-info {
+  background: rgba(145, 70, 255, 0.9);
+  color: #fff;
+}
+
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness for toasts */
+@media (max-width: 768px) {
+  .toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .toast {
+    min-width: unset;
+    max-width: unset;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .current-track-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .track-image {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .compact-track-image {
+    width: 40px;
+    height: 40px;
+    margin-right: 0.75rem;
+  }
+  
+  .queue-item-compact .compact-track-image {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .queue-item-compact {
+    min-width: 280px;
+    max-width: 90vw;
+    margin: 0 5vw;
+    left: 50%;
+  }
+  
+  .current-track-info .track-name {
+    font-size: 1.125rem;
+  }
+  
+  .compact-track-info .track-name {
+    font-size: 0.95rem;
+  }
+  
+  .compact-track-info .track-artist {
+    font-size: 0.8rem;
+  }
+  
+  .compact-track-info .track-time {
+    font-size: 0.7rem;
+  }
+}
+
+/* Utilities */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.text-primary { color: var(--twitch-text-primary); }
+.text-secondary { color: var(--twitch-text-secondary); }
+.text-muted { color: var(--twitch-text-muted); }
+.text-purple { color: var(--twitch-purple); }
+.text-green { color: var(--twitch-green); }
+.text-error { color: var(--twitch-error); }
+
+.hidden { display: none; }
+.visible { display: block; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 0.5rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .grid-cols-2,
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .navbar .flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+/* Queue Container & Layout */
+.queue-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 80px); /* Account for navbar */
+}
+
+.queue-container.compact {
+  padding: 0;
+  max-width: none;
+  margin: 0;
+}
+
+/* Queue Header */
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--twitch-border);
+}
+
+.queue-header h1 {
+  color: var(--twitch-text-primary);
+  font-size: 2rem;
+  margin: 0;
+}
+
+.queue-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.queue-controls .btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--twitch-border);
+  background: var(--twitch-bg-medium);
+  color: var(--twitch-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.queue-controls .btn:hover {
+  background: var(--twitch-hover);
+}
+
+.queue-controls .btn-success {
+  background: var(--twitch-green);
+  border-color: var(--twitch-green);
+  color: var(--twitch-bg-dark);
+}
+
+.queue-controls .btn-secondary {
+  background: var(--twitch-bg-light);
+  border-color: var(--twitch-border);
+}
+
+.queue-controls .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.queue-controls .btn-small {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+/* Queue Meta Info */
+.queue-last-updated {
+  color: var(--twitch-text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.queue-error {
+  margin-bottom: 1rem;
+}
+
+/* Queue Content */
+.queue-content {
+  display: grid;
+  gap: 2rem;
+}
+
+/* Now Playing Section */
+.queue-now-playing {
+  background: var(--twitch-bg-light);
+  border: 1px solid var(--twitch-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.queue-now-playing h2 {
+  color: var(--twitch-text-primary);
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.current-track-card {
+  background: var(--twitch-bg-medium);
+  border: 1px solid var(--twitch-border);
+  border-radius: 6px;
+  padding: 1rem;
+  border-left: 4px solid var(--twitch-green);
+}
+
+.current-track-card .track-info {
+  margin-bottom: 1rem;
+}
+
+.current-track-card .track-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--twitch-text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.current-track-card .track-meta {
+  color: var(--twitch-text-secondary);
+  font-size: 0.875rem;
+}
+
+.no-track {
+  text-align: center;
+  padding: 2rem;
+  color: var(--twitch-text-muted);
+}
+
+/* Queue List Section */
+.queue-list {
+  background: var(--twitch-bg-light);
+  border: 1px solid var(--twitch-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.queue-list h2 {
+  color: var(--twitch-text-primary);
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.queue-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.empty-queue {
+  text-align: center;
+  padding: 2rem;
+  color: var(--twitch-text-muted);
+}
+
+.empty-queue p {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.empty-queue small {
+  color: var(--twitch-text-muted);
+}
+
+/* Queue Instructions */
+.queue-instructions {
+  background: var(--twitch-bg-light);
+  border: 1px solid var(--twitch-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.queue-instructions h3 {
+  color: var(--twitch-text-primary);
+  margin-bottom: 1rem;
+  font-size: 1.125rem;
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.instructions-grid h4 {
+  color: var(--twitch-text-primary);
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.instructions-grid p {
+  color: var(--twitch-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.instructions-grid ul {
+  list-style: none;
+  padding: 0;
+}
+
+.instructions-grid li {
+  color: var(--twitch-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.instructions-grid strong {
+  color: var(--twitch-purple);
+  font-family: 'Courier New', monospace;
+}
+
+/* Alert Styles */
+.alert {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.alert-error {
+  background: rgba(241, 60, 32, 0.1);
+  border: 1px solid var(--twitch-error);
+  color: var(--twitch-error);
+}
+
+.alert-warning {
+  background: rgba(255, 105, 5, 0.1);
+  border: 1px solid var(--twitch-warning);
+  color: var(--twitch-warning);
+}
+
+.btn-primary {
+  background: var(--twitch-purple);
+  border-color: var(--twitch-purple);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--twitch-purple-dark);
+}
+
+.no-data {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--twitch-text-muted);
+}
+
+/* Compact Queue Styles (for inline compact mode) */
+.queue-compact {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  z-index: 1000;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Updated Compact Layout */
+.compact-current-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(14, 14, 16, 0.9); /* Semi-transparent dark background */
+  border-radius: 8px;
+  margin: 0 1rem 4px 1rem; /* Leave space for progress bar */
+  backdrop-filter: blur(10px);
+}
+
+.compact-track-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 1rem;
+}
+
+.compact-track-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.compact-track-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.compact-track-info .track-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--twitch-text-primary);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-track-info .track-artist {
+  color: var(--twitch-text-secondary);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-track-info .track-time {
+  font-size: 0.75rem;
+  color: var(--twitch-text-muted);
+  margin-top: 0.25rem;
+}
+
+.compact-progress-bar {
+  height: 4px;
+  background: rgba(44, 44, 53, 0.8);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+}
+
+.compact-progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  transition: width 0.3s ease;
+}
+
+.compact-no-track {
+  text-align: center;
+  padding: 2rem;
+  color: var(--twitch-text-muted);
+}
+
+.compact-no-track .no-track-message {
+  font-size: 1rem;
+}
+
+/* Status Indicators */

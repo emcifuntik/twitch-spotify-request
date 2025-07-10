@@ -374,10 +374,20 @@ func (rl *RewardListener) HandleRewardRedemption(rewardID string, userID string,
 
 	// Find the reward by Twitch ID
 	var rewardType RewardID = 0
+	var foundReward bool = false
 	for _, reward := range rl.rewards {
 		if reward.TwitchID == rewardID {
 			rewardType = RewardID(reward.InternalID)
+			foundReward = true
+			log.Printf("Found matching reward: Internal ID %d, Type: %d", reward.InternalID, rewardType)
 			break
+		}
+	}
+
+	if !foundReward {
+		log.Printf("No matching reward found for Twitch reward ID: %s. Available rewards:", rewardID)
+		for _, reward := range rl.rewards {
+			log.Printf("  - Internal ID: %d, Twitch ID: %s", reward.InternalID, reward.TwitchID)
 		}
 	}
 
@@ -388,12 +398,8 @@ func (rl *RewardListener) HandleRewardRedemption(rewardID string, userID string,
 	case RewardIDSkipSong:
 		return rl.handleSongSkip(userName, rewardID)
 	default:
-		// Fallback to old logic for unknown rewards
-		if promptText != "" {
-			return rl.handleSongRequest(userName, promptText, rewardID)
-		} else {
-			return rl.handleSongSkip(userName, rewardID)
-		}
+		log.Printf("Unknown reward type for reward ID %s, ignoring", rewardID)
+		return nil
 	}
 }
 
@@ -673,7 +679,7 @@ func (rl *RewardListener) HandleChatCommand(userName, command, args string) {
 
 // handleSongHelp shows available commands
 func (rl *RewardListener) handleSongHelp(userName string) {
-	rl.sendMessage(fmt.Sprintf("@%s список доступных комманд: !sc - узнать текущий трек; !sr - список прошлых треков", userName))
+	rl.sendMessage(fmt.Sprintf("@%s Available commands: !sc - current song; !sq - view queue; !sr - recent songs; !volume <0-100> - change volume (mods/broadcaster only)", userName))
 }
 
 // handleVolumeCommand changes the volume
@@ -689,7 +695,7 @@ func (rl *RewardListener) handleVolumeCommand(userName, args string) {
 
 	// Check if user is mod or broadcaster
 	if !rl.isUserModOrBroadcaster(userName) {
-		rl.sendMessage(fmt.Sprintf("@%s только модераторы и стример могут менять громкость", userName))
+		rl.sendMessage(fmt.Sprintf("@%s Only moderators and the broadcaster can change volume", userName))
 		return
 	}
 
@@ -706,7 +712,7 @@ func (rl *RewardListener) handleVolumeCommand(userName, args string) {
 		return
 	}
 
-	rl.sendMessage(fmt.Sprintf("@%s звук выставлен на %d%%", userName, volume))
+	rl.sendMessage(fmt.Sprintf("@%s Volume set to %d%%", userName, volume))
 }
 
 // isUserModOrBroadcaster checks if a user is a moderator or the broadcaster
@@ -746,7 +752,7 @@ func (rl *RewardListener) handleRecentSongs(userName string) {
 	recentTracks, err := rl.spotifyClient.GetRecentlyPlayed(5)
 	if err != nil {
 		log.Printf("Error getting recent tracks: %v", err)
-		rl.sendMessage(fmt.Sprintf("@%s произошла ошибка при получении последних треков", userName))
+		rl.sendMessage(fmt.Sprintf("@%s Error getting recent tracks", userName))
 		return
 	}
 
@@ -755,19 +761,19 @@ func (rl *RewardListener) handleRecentSongs(userName string) {
 		trackNames = append(trackNames, spotify.SongItemToReadableSimple(&item.Track))
 	}
 
-	rl.sendMessage(fmt.Sprintf("@%s последние проигранные треки: %s", userName, strings.Join(trackNames, "; ")))
+	rl.sendMessage(fmt.Sprintf("@%s Recent tracks: %s", userName, strings.Join(trackNames, "; ")))
 }
 
 // handleCurrentSong shows the currently playing track
 func (rl *RewardListener) handleCurrentSong(userName string) {
 	currentTrack, err := rl.spotifyClient.GetCurrentTrack()
 	if err != nil || currentTrack.Item == nil {
-		rl.sendMessage(fmt.Sprintf("@%s сорян, у меня какая-то ошибка произошла", userName))
+		rl.sendMessage(fmt.Sprintf("@%s Sorry, an error occurred getting current track", userName))
 		return
 	}
 
 	songName := spotify.SongItemToReadable(currentTrack.Item)
-	rl.sendMessage(fmt.Sprintf("@%s текущий трек %s", userName, songName))
+	rl.sendMessage(fmt.Sprintf("@%s Current track: %s", userName, songName))
 }
 
 // handleSongQueue shows the current queue
@@ -775,7 +781,7 @@ func (rl *RewardListener) handleSongQueue(userName string) {
 	queueData, err := rl.GetQueueData()
 	if err != nil {
 		log.Printf("Error getting queue data: %v", err)
-		rl.sendMessage(fmt.Sprintf("@%s произошла ошибка при получении очереди", userName))
+		rl.sendMessage(fmt.Sprintf("@%s Error getting queue", userName))
 		return
 	}
 
@@ -786,10 +792,10 @@ func (rl *RewardListener) handleSongQueue(userName string) {
 	}
 
 	if len(prettyQueue) > 5 {
-		rl.sendMessage(fmt.Sprintf("@%s текущая очередь треков: %s. https://catjammusic.com/queue/%d",
+		rl.sendMessage(fmt.Sprintf("@%s Current queue: %s. View full queue: https://catjammusic.com/queue/%d",
 			userName, strings.Join(prettyQueue[:5], "; "), rl.streamer.ID))
 	} else {
-		rl.sendMessage(fmt.Sprintf("@%s текущая очередь треков: %s", userName, strings.Join(prettyQueue, "; ")))
+		rl.sendMessage(fmt.Sprintf("@%s Current queue: %s", userName, strings.Join(prettyQueue, "; ")))
 	}
 }
 

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
+	spotifylib "github.com/zmb3/spotify/v2"
 	"github.com/emcifuntik/twitch-spotify-request/internal/db"
 	"github.com/emcifuntik/twitch-spotify-request/internal/spotify"
 	"github.com/nicklaw5/helix/v2"
-	spotifylib "github.com/zmb3/spotify/v2"
 )
 
 // formatDuration formats seconds into a human readable time format

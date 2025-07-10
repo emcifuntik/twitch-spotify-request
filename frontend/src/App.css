@@ -4,6 +4,11 @@
   background: var(--twitch-bg-dark);
 }
 
+/* Compact queue transparent background */
+.compact-route {
+  background-color: transparent !important;
+}
+
 main {
   padding-top: 2rem;
   padding-bottom: 2rem;

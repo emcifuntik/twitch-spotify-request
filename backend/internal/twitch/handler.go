@@ -52,7 +52,6 @@ const (
 // SongQueueData represents the current queue state using Spotify's native queue
 type SongQueueData struct {
 	Queue        []spotifylib.FullTrack `json:"q"`
-	CurrentSong  string                 `json:"currentSong"`
 	CurrentTrack *spotifylib.FullTrack  `json:"currentTrack,omitempty"`
 	Progress     int                    `json:"progress"`
 	Duration     int                    `json:"duration"`
@@ -389,6 +388,13 @@ func (rl *RewardListener) HandleRewardRedemption(rewardID string, userID string,
 		for _, reward := range rl.rewards {
 			log.Printf("  - Internal ID: %d, Twitch ID: %s", reward.InternalID, reward.TwitchID)
 		}
+		return nil // Don't process unknown rewards
+	}
+
+	// Validate that this is a known reward type
+	if !isValidRewardType(rewardType) {
+		log.Printf("Invalid reward type %d for reward ID %s, ignoring", rewardType, rewardID)
+		return nil
 	}
 
 	// Handle the reward based on type
@@ -624,7 +630,6 @@ func (rl *RewardListener) GetQueueData() (*SongQueueData, error) {
 	if err != nil || currentTrack.Item == nil {
 		return &SongQueueData{
 			Queue:        []spotifylib.FullTrack{},
-			CurrentSong:  "",
 			CurrentTrack: nil,
 			Duration:     0,
 			Progress:     0,
@@ -637,7 +642,6 @@ func (rl *RewardListener) GetQueueData() (*SongQueueData, error) {
 		log.Printf("Error getting Spotify queue: %v", err)
 		return &SongQueueData{
 			Queue:        []spotifylib.FullTrack{},
-			CurrentSong:  spotify.SongItemToReadable(currentTrack.Item),
 			CurrentTrack: currentTrack.Item,
 			Duration:     int(currentTrack.Item.Duration),
 			Progress:     int(currentTrack.Progress),
@@ -646,7 +650,6 @@ func (rl *RewardListener) GetQueueData() (*SongQueueData, error) {
 
 	rl.lastQueue = &SongQueueData{
 		Queue:        spotifyQueue.Items,
-		CurrentSong:  spotify.SongItemToReadable(currentTrack.Item),
 		CurrentTrack: currentTrack.Item,
 		Duration:     int(currentTrack.Item.Duration),
 		Progress:     int(currentTrack.Progress),
@@ -663,17 +666,26 @@ func GetRewardListener(channelID string) *RewardListener {
 
 // HandleChatCommand processes chat commands
 func (rl *RewardListener) HandleChatCommand(userName, command, args string) {
+	log.Printf("Processing chat command: %s from user: %s with args: %s", command, userName, args)
+
 	switch ChatCommand(command) {
 	case ChatCommandSongHelp:
+		log.Printf("Handling song help command for user: %s", userName)
 		rl.handleSongHelp(userName)
 	case ChatCommandSongVolume:
+		log.Printf("Handling volume command for user: %s with args: %s", userName, args)
 		rl.handleVolumeCommand(userName, args)
 	case ChatCommandSongsRecent:
+		log.Printf("Handling recent songs command for user: %s", userName)
 		rl.handleRecentSongs(userName)
 	case ChatCommandSongCurrent:
+		log.Printf("Handling current song command for user: %s", userName)
 		rl.handleCurrentSong(userName)
 	case ChatCommandSongQueue:
+		log.Printf("Handling song queue command for user: %s", userName)
 		rl.handleSongQueue(userName)
+	default:
+		log.Printf("Unknown command: %s from user: %s", command, userName)
 	}
 }
 
@@ -684,22 +696,33 @@ func (rl *RewardListener) handleSongHelp(userName string) {
 
 // handleVolumeCommand changes the volume
 func (rl *RewardListener) handleVolumeCommand(userName, args string) {
+	log.Printf("Volume command received from user: %s, args: %s", userName, args)
+
 	if args == "" {
+		log.Printf("Volume command failed: no volume specified by user %s", userName)
+		rl.sendMessage(fmt.Sprintf("@%s Please specify a volume level (0-100)", userName))
 		return
 	}
 
 	volume, err := strconv.Atoi(args)
 	if err != nil {
+		log.Printf("Volume command failed: invalid volume '%s' from user %s: %v", args, userName, err)
+		rl.sendMessage(fmt.Sprintf("@%s Please specify a valid volume level (0-100)", userName))
 		return
 	}
 
+	log.Printf("Checking permissions for user %s", userName)
 	// Check if user is mod or broadcaster
 	if !rl.isUserModOrBroadcaster(userName) {
+		log.Printf("Volume command denied: user %s is not mod or broadcaster", userName)
 		rl.sendMessage(fmt.Sprintf("@%s Only moderators and the broadcaster can change volume", userName))
 		return
 	}
 
+	log.Printf("Permission check passed for user %s", userName)
+
 	// Clamp volume between 0 and 100
+	originalVolume := volume
 	if volume < 0 {
 		volume = 0
 	}
@@ -707,25 +730,40 @@ func (rl *RewardListener) handleVolumeCommand(userName, args string) {
 		volume = 100
 	}
 
+	if originalVolume != volume {
+		log.Printf("Volume clamped from %d to %d", originalVolume, volume)
+	}
+
+	log.Printf("Setting Spotify volume to %d%%", volume)
 	if err := rl.spotifyClient.SetVolume(volume); err != nil {
-		log.Printf("Error setting volume: %v", err)
+		log.Printf("Error setting volume to %d%%: %v", volume, err)
+		rl.sendMessage(fmt.Sprintf("@%s Error setting volume: %v", userName, err))
 		return
 	}
 
+	log.Printf("Volume successfully set to %d%% for user %s", volume, userName)
 	rl.sendMessage(fmt.Sprintf("@%s Volume set to %d%%", userName, volume))
 }
 
 // isUserModOrBroadcaster checks if a user is a moderator or the broadcaster
 func (rl *RewardListener) isUserModOrBroadcaster(userName string) bool {
+	log.Printf("Checking if user %s is mod or broadcaster", userName)
+
 	channelName := rl.getChannelName()
+	log.Printf("Channel name: %s", channelName)
+
 	if channelName == "" {
+		log.Printf("Channel name is empty, denying permission")
 		return false
 	}
 
 	// Check if user is the broadcaster
 	if strings.EqualFold(userName, channelName) {
+		log.Printf("User %s is the broadcaster (channel: %s)", userName, channelName)
 		return true
 	}
+
+	log.Printf("User %s is not the broadcaster, checking moderator list", userName)
 
 	// Get moderators list
 	mods, err := rl.client.GetModerators(&helix.GetModeratorsParams{
@@ -733,17 +771,22 @@ func (rl *RewardListener) isUserModOrBroadcaster(userName string) bool {
 	})
 
 	if err != nil {
-		log.Printf("Error getting moderators: %v", err)
+		log.Printf("Error getting moderators for channel %s (ID: %s): %v", channelName, rl.streamer.ChannelID, err)
 		return false
 	}
 
+	log.Printf("Found %d moderators for channel %s", len(mods.Data.Moderators), channelName)
+
 	// Check if user is in moderators list
 	for _, mod := range mods.Data.Moderators {
+		log.Printf("Checking moderator: %s vs user: %s", mod.UserName, userName)
 		if strings.EqualFold(mod.UserName, userName) {
+			log.Printf("User %s found in moderators list", userName)
 			return true
 		}
 	}
 
+	log.Printf("User %s not found in moderators list", userName)
 	return false
 }
 
@@ -796,6 +839,16 @@ func (rl *RewardListener) handleSongQueue(userName string) {
 			userName, strings.Join(prettyQueue[:5], "; "), rl.streamer.ID))
 	} else {
 		rl.sendMessage(fmt.Sprintf("@%s Current queue: %s", userName, strings.Join(prettyQueue, "; ")))
+	}
+}
+
+// isValidRewardType checks if a reward type is valid and expected
+func isValidRewardType(rewardType RewardID) bool {
+	switch rewardType {
+	case RewardIDRequestSong, RewardIDSkipSong:
+		return true
+	default:
+		return false
 	}
 }
 

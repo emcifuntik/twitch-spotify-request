@@ -24,10 +24,18 @@ const QueueItem: React.FC<QueueItemProps> = ({
     )
   }
 
-  const trackName = track.name || 'Unknown Track'
-  const trackArtists = track.artists 
-    ? (Array.isArray(track.artists) ? track.artists.join(', ') : track.artists)
-    : 'Unknown Artist'
+  // Extract song name and artists properly
+  let songName = track.name || 'Unknown Track'
+  let artistNames: string
+  
+  // Handle artists - could be string or array
+  if (Array.isArray(track.artists)) {
+    artistNames = track.artists.join(', ')
+  } else if (track.artists) {
+    artistNames = track.artists
+  } else {
+    artistNames = 'Unknown Artist'
+  }
 
   // Compact mode - minimal display with only title, artist, and progress bar
   if (compact) {
@@ -36,12 +44,12 @@ const QueueItem: React.FC<QueueItemProps> = ({
         <div className="compact-current-track">
           {track.image && (
             <div className="compact-track-image">
-              <img src={track.image} alt={trackName} />
+              <img src={track.image} alt={songName} />
             </div>
           )}
           <div className="compact-track-info">
-            <div className="track-name">{trackName}</div>
-            <div className="track-artist">{trackArtists}</div>
+            <div className="track-name">{songName}</div>
+            <div className="track-artist">{artistNames}</div>
           </div>
         </div>
         
@@ -64,12 +72,12 @@ const QueueItem: React.FC<QueueItemProps> = ({
       <div className="queue-item-content">
         {track.image && (
           <div className="track-image">
-            <img src={track.image} alt={trackName} />
+            <img src={track.image} alt={songName} />
           </div>
         )}
         <div className="track-info">
-          <div className="track-title">{trackName}</div>
-          <div className="track-artist">{trackArtists}</div>
+          <div className="track-title">{songName}</div>
+          <div className="track-artist">{artistNames}</div>
         </div>
         {showDuration && track.duration && (
           <div className="track-duration">

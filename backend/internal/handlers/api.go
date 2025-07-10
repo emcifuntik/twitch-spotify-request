@@ -190,9 +190,13 @@ func GetQueue(w http.ResponseWriter, r *http.Request) {
 			currentSongArtists = append(currentSongArtists, artist.Name)
 		}
 	}
+	var currentSongName string
+	if queueData.CurrentTrack != nil {
+		currentSongName = queueData.CurrentTrack.Name
+	}
 
 	response := QueueResponse{
-		CurrentSong:        queueData.CurrentSong,
+		CurrentSong:        currentSongName,
 		CurrentSongImage:   currentSongImage,
 		CurrentSongArtists: currentSongArtists,
 		Progress:           queueData.Progress,
@@ -284,9 +288,13 @@ func GetPublicQueue(w http.ResponseWriter, r *http.Request) {
 			currentSongArtists = append(currentSongArtists, artist.Name)
 		}
 	}
+	var currentSongName string
+	if queueData.CurrentTrack != nil {
+		currentSongName = queueData.CurrentTrack.Name
+	}
 
 	response := QueueResponse{
-		CurrentSong:        queueData.CurrentSong,
+		CurrentSong:        currentSongName,
 		CurrentSongImage:   currentSongImage,
 		CurrentSongArtists: currentSongArtists,
 		Progress:           queueData.Progress,

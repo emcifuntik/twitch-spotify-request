@@ -274,11 +274,16 @@ func (s *SpotifyClient) GetRecentlyPlayed(limit int) ([]spotify.RecentlyPlayedIt
 
 // SetVolume sets the player volume
 func (s *SpotifyClient) SetVolume(volume int) error {
+	log.Printf("Setting Spotify volume to %d%% via API", volume)
+
 	ctx := context.Background()
 	err := s.client.Volume(ctx, volume)
 	if err != nil {
+		log.Printf("Spotify API error setting volume to %d%%: %v", volume, err)
 		return fmt.Errorf("failed to set volume: %w", err)
 	}
+
+	log.Printf("Successfully set Spotify volume to %d%%", volume)
 	return nil
 }
 

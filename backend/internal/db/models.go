@@ -18,6 +18,7 @@ type Streamer struct {
 	Blocks         []Block       `gorm:"foreignKey:StreamerID"`
 	ConfigStore    []ConfigStore `gorm:"foreignKey:StreamerID"`
 	Requests       []Request     `gorm:"foreignKey:StreamerID"`
+	Moderators     []Moderator   `gorm:"foreignKey:StreamerID"`
 }
 
 // Reward represents the rewards table.
@@ -66,4 +67,16 @@ type Request struct {
 	// Optional: Associations
 	Streamer Streamer `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	User     User     `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+}
+
+// Moderator represents the moderators table for bot moderators.
+type Moderator struct {
+	ID         uint      `gorm:"primaryKey;autoIncrement;column:moderator_id"`
+	StreamerID uint      `gorm:"column:moderator_streamer_id;not null;index"`
+	TwitchID   string    `gorm:"column:moderator_twitch_id;size:64;not null"`
+	TwitchName string    `gorm:"column:moderator_twitch_name;size:64;not null"`
+	Avatar     string    `gorm:"column:moderator_avatar;size:256"`
+	AddedAt    time.Time `gorm:"column:moderator_added_at;autoCreateTime"`
+	// Optional: Association with Streamer
+	Streamer Streamer `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }

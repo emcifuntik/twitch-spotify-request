@@ -435,6 +435,75 @@ main {
   margin-top: 2px;
 }
 
+/* Dark Theme Search Styles for Moderators */
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--twitch-bg-light);
+  border: 1px solid var(--twitch-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 2px;
+  border-radius: 4px;
+}
+
+.search-result {
+  border-bottom: 1px solid var(--twitch-border);
+}
+
+.search-result:hover,
+.search-result.selected {
+  background-color: var(--twitch-hover);
+}
+
+.result-name {
+  color: var(--twitch-text-primary);
+}
+
+.result-info {
+  color: var(--twitch-text-secondary);
+}
+
+.search-error {
+  background-color: rgba(241, 60, 32, 0.1);
+  color: var(--twitch-error);
+  border: 1px solid var(--twitch-error);
+}
+
+.clear-button {
+  color: var(--twitch-text-secondary);
+}
+
+.clear-button:hover {
+  background-color: var(--twitch-hover);
+  color: var(--twitch-text-primary);
+}
+
+.search-loading .spinner {
+  border: 2px solid var(--twitch-bg-medium);
+  border-top: 2px solid var(--twitch-purple);
+}
+
+/* Form Input Dark Theme */
+.form-input.search-input {
+  background-color: var(--twitch-bg-dark);
+  border: 1px solid var(--twitch-border);
+  color: var(--twitch-text-primary);
+}
+
+.form-input.search-input:focus {
+  border-color: var(--twitch-purple);
+  box-shadow: 0 0 0 3px rgba(145, 70, 255, 0.1);
+}
+
+.form-input.search-input::placeholder {
+  color: var(--twitch-text-muted);
+}
+
 .search-result {
   padding: 12px;
   cursor: pointer;

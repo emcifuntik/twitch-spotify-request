@@ -94,6 +94,28 @@ type SpotifySearchResponse struct {
 	Results []SpotifySearchResult `json:"results"`
 }
 
+// ModeratorResponse represents a moderator for API responses
+type ModeratorResponse struct {
+	ID         uint   `json:"id"`
+	TwitchID   string `json:"twitch_id"`
+	TwitchName string `json:"twitch_name"`
+	Avatar     string `json:"avatar"`
+	AddedAt    string `json:"added_at"`
+}
+
+// AddModeratorRequest represents the request to add a moderator
+type AddModeratorRequest struct {
+	TwitchName string `json:"twitch_name"`
+}
+
+// TwitchUserSearchResult represents a Twitch user search result
+type TwitchUserSearchResult struct {
+	ID          string `json:"id"`
+	Login       string `json:"login"`
+	DisplayName string `json:"display_name"`
+	Avatar      string `json:"avatar"`
+}
+
 // GetUserProfile returns the user's profile information
 func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	// This is a simplified version - in production you'd get user ID from JWT/session
@@ -800,6 +822,197 @@ func FixRewards(w http.ResponseWriter, r *http.Request) {
 	writeAPISuccess(w, map[string]string{
 		"message": "Rewards have been fixed successfully",
 	})
+}
+
+// GetModerators returns the moderators for a user
+func GetModerators(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+
+	if userID == "" {
+		writeAPIError(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get user from database
+	database := db.GetDB()
+	if database == nil {
+		writeAPIError(w, "Database not available", http.StatusInternalServerError)
+		return
+	}
+
+	var streamer db.Streamer
+	result := database.Where("streamer_channel_id = ?", userID).First(&streamer)
+	if result.Error != nil {
+		writeAPIError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Get moderators
+	moderators, err := db.GetModerators(database, streamer.ID)
+	if err != nil {
+		writeAPIError(w, "Failed to get moderators", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to response format
+	var moderatorResponses []ModeratorResponse
+	for _, mod := range moderators {
+		moderatorResponses = append(moderatorResponses, ModeratorResponse{
+			ID:         mod.ID,
+			TwitchID:   mod.TwitchID,
+			TwitchName: mod.TwitchName,
+			Avatar:     mod.Avatar,
+			AddedAt:    mod.AddedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	writeAPISuccess(w, moderatorResponses)
+}
+
+// AddModerator adds a new moderator for a user
+func AddModerator(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+
+	if userID == "" {
+		writeAPIError(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Parse request body
+	var req AddModeratorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.TwitchName == "" {
+		writeAPIError(w, "Twitch name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get user from database
+	database := db.GetDB()
+	if database == nil {
+		writeAPIError(w, "Database not available", http.StatusInternalServerError)
+		return
+	}
+
+	var streamer db.Streamer
+	result := database.Where("streamer_channel_id = ?", userID).First(&streamer)
+	if result.Error != nil {
+		writeAPIError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Get the reward listener to access Twitch API
+	rl := twitch.GetRewardListener(userID)
+	if rl == nil {
+		writeAPIError(w, "Twitch API not available", http.StatusInternalServerError)
+		return
+	}
+
+	// Search for the user on Twitch to get their info
+	twitchUser, err := rl.GetTwitchUserByName(req.TwitchName)
+	if err != nil {
+		writeAPIError(w, "Failed to find user on Twitch", http.StatusNotFound)
+		return
+	}
+
+	// Add moderator
+	err = db.AddModerator(database, streamer.ID, twitchUser.ID, twitchUser.DisplayName, twitchUser.ProfileImageURL)
+	if err != nil {
+		writeAPIError(w, "Failed to add moderator", http.StatusInternalServerError)
+		return
+	}
+
+	writeAPISuccess(w, map[string]string{
+		"message": "Moderator added successfully",
+	})
+}
+
+// RemoveModerator removes a moderator for a user
+func RemoveModerator(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+	moderatorID := vars["moderatorID"]
+
+	if userID == "" || moderatorID == "" {
+		writeAPIError(w, "User ID and Moderator ID are required", http.StatusBadRequest)
+		return
+	}
+
+	// Convert moderator ID to uint
+	modID, err := strconv.ParseUint(moderatorID, 10, 32)
+	if err != nil {
+		writeAPIError(w, "Invalid moderator ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get user from database
+	database := db.GetDB()
+	if database == nil {
+		writeAPIError(w, "Database not available", http.StatusInternalServerError)
+		return
+	}
+
+	var streamer db.Streamer
+	result := database.Where("streamer_channel_id = ?", userID).First(&streamer)
+	if result.Error != nil {
+		writeAPIError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Remove moderator
+	err = db.RemoveModerator(database, streamer.ID, uint(modID))
+	if err != nil {
+		writeAPIError(w, "Failed to remove moderator", http.StatusInternalServerError)
+		return
+	}
+
+	writeAPISuccess(w, map[string]string{
+		"message": "Moderator removed successfully",
+	})
+}
+
+// SearchTwitchUsers searches for Twitch users (for moderator autocomplete)
+func SearchTwitchUsers(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+	query := r.URL.Query().Get("q")
+
+	if userID == "" || query == "" {
+		writeAPIError(w, "User ID and query are required", http.StatusBadRequest)
+		return
+	}
+
+	// Get the reward listener to access Twitch API
+	rl := twitch.GetRewardListener(userID)
+	if rl == nil {
+		writeAPIError(w, "Twitch API not available", http.StatusInternalServerError)
+		return
+	}
+
+	// Search for users on Twitch
+	users, err := rl.SearchTwitchUsers(query)
+	if err != nil {
+		writeAPIError(w, "Failed to search users", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to response format
+	var userResults []TwitchUserSearchResult
+	for _, user := range users {
+		userResults = append(userResults, TwitchUserSearchResult{
+			ID:          user.ID,
+			Login:       user.Login,
+			DisplayName: user.DisplayName,
+			Avatar:      user.ProfileImageURL,
+		})
+	}
+
+	writeAPISuccess(w, userResults)
 }
 
 // Helper functions

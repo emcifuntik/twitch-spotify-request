@@ -54,6 +54,12 @@ func RegisterRoutes(r *mux.Router) {
 	userAPI.HandleFunc("/blocks/{blockID}", RemoveBlock).Methods("DELETE")
 	userAPI.HandleFunc("/spotify/search", SpotifySearch).Methods("GET")
 
+	// Moderator endpoints
+	userAPI.HandleFunc("/moderators", GetModerators).Methods("GET")
+	userAPI.HandleFunc("/moderators", AddModerator).Methods("POST")
+	userAPI.HandleFunc("/moderators/{moderatorID}", RemoveModerator).Methods("DELETE")
+	userAPI.HandleFunc("/twitch/search", SearchTwitchUsers).Methods("GET")
+
 	// Enable CORS for all API routes
 	api.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -787,9 +787,20 @@ func (rl *RewardListener) isUserModOrBroadcaster(userName string) bool {
 		return true
 	}
 
-	log.Printf("User %s is not the broadcaster, checking moderator list", userName)
+	log.Printf("User %s is not the broadcaster, checking bot moderators", userName)
 
-	// Get moderators list
+	// Check if user is a bot moderator
+	database := db.GetDB()
+	if database != nil {
+		if db.IsBotModeratorByName(database, rl.streamer.ID, userName) {
+			log.Printf("User %s is a bot moderator", userName)
+			return true
+		}
+	}
+
+	log.Printf("User %s is not a bot moderator, checking Twitch moderators", userName)
+
+	// Get moderators list from Twitch
 	mods, err := rl.client.GetModerators(&helix.GetModeratorsParams{
 		BroadcasterID: rl.streamer.ChannelID,
 	})
@@ -799,13 +810,13 @@ func (rl *RewardListener) isUserModOrBroadcaster(userName string) bool {
 		return false
 	}
 
-	log.Printf("Found %d moderators for channel %s", len(mods.Data.Moderators), channelName)
+	log.Printf("Found %d Twitch moderators for channel %s", len(mods.Data.Moderators), channelName)
 
-	// Check if user is in moderators list
+	// Check if user is in Twitch moderators list
 	for _, mod := range mods.Data.Moderators {
 		log.Printf("Checking moderator: %s vs user: %s", mod.UserName, userName)
 		if strings.EqualFold(mod.UserName, userName) {
-			log.Printf("User %s found in moderators list", userName)
+			log.Printf("User %s found in Twitch moderators list", userName)
 			return true
 		}
 	}
@@ -1034,4 +1045,41 @@ func (rl *RewardListener) startPeriodicCleanup() {
 			log.Printf("Performed periodic cleanup for streamer %d", rl.streamer.ID)
 		}
 	}()
+}
+
+// GetTwitchUserByName gets a Twitch user by their username
+func (rl *RewardListener) GetTwitchUserByName(username string) (*helix.User, error) {
+	resp, err := rl.client.GetUsers(&helix.UsersParams{
+		Logins: []string{username},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Data.Users) == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return &resp.Data.Users[0], nil
+}
+
+// SearchTwitchUsers searches for Twitch users (limited functionality due to API restrictions)
+func (rl *RewardListener) SearchTwitchUsers(query string) ([]helix.User, error) {
+	// Twitch API doesn't have a direct search endpoint for users
+	// We'll try to get the user directly by their login name (case-insensitive)
+	query = strings.ToLower(strings.TrimSpace(query))
+
+	// Try exact match first
+	resp, err := rl.client.GetUsers(&helix.UsersParams{
+		Logins: []string{query},
+	})
+
+	if err != nil {
+		log.Printf("Error searching for user %s: %v", query, err)
+		return nil, err
+	}
+
+	log.Printf("Found %d users for query '%s'", len(resp.Data.Users), query)
+	return resp.Data.Users, nil
 }

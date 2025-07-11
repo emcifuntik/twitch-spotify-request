@@ -110,6 +110,26 @@ p {
 .mt-3 { margin-top: 1.5rem; }
 .mt-4 { margin-top: 2rem; }
 
+.mr-2 { margin-right: 1rem; }
+.mr-3 { margin-right: 1.5rem; }
+
+.py-2 { padding-top: 1rem; padding-bottom: 1rem; }
+.py-3 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.py-4 { padding-top: 2rem; padding-bottom: 2rem; }
+.py-6 { padding-top: 3rem; padding-bottom: 3rem; }
+
+.px-2 { padding-left: 1rem; padding-right: 1rem; }
+.px-3 { padding-left: 1.5rem; padding-right: 1.5rem; }
+
+.space-y-2 > * + * { margin-top: 1rem; }
+.space-y-3 > * + * { margin-top: 1.5rem; }
+
+.w-8 { width: 2rem; }
+.h-8 { height: 2rem; }
+
+.rounded { border-radius: 0.375rem; }
+.rounded-full { border-radius: 9999px; }
+
 /* Cards */
 .card {
   background: var(--twitch-bg-medium);
@@ -784,6 +804,16 @@ body:has(.queue-compact-page) {
 .text-purple { color: var(--twitch-purple); }
 .text-green { color: var(--twitch-green); }
 .text-error { color: var(--twitch-error); }
+
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
 
 .hidden { display: none; }
 .visible { display: block; }

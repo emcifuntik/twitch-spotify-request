@@ -27,7 +27,7 @@ func init() {
 		ClientID:     os.Getenv("TWITCH_CLIENT_ID"),
 		ClientSecret: os.Getenv("TWITCH_CLIENT_SECRET"),
 		RedirectURL:  botHost + "oauth/twitch",
-		Scopes:       []string{"user:read:chat", "user:write:chat", "channel:bot", "moderation:read", "user:bot", "channel:read:redemptions", "channel:manage:redemptions"},
+		Scopes:       []string{"user:read:chat", "user:write:chat", "channel:bot", "user:bot", "channel:read:redemptions", "channel:manage:redemptions"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://id.twitch.tv/oauth2/authorize",
 			TokenURL: "https://id.twitch.tv/oauth2/token",

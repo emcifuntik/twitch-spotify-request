@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import LoadingSpinner from './LoadingSpinner'
 import { useToast } from '../contexts/ToastContext'
+import { Button, Card, SearchableDropdown, Avatar, Spinner, ListItem } from './ui'
 
 interface Moderator {
   id: number
@@ -164,30 +164,33 @@ const Moderators: React.FC<ModeratorsProps> = ({ userId }) => {
   }
 
   if (loading) {
-    return <LoadingSpinner message="Loading moderators..." />
+    return <Spinner size="large" />
   }
 
   if (error) {
     return (
-      <div className="alert alert-error">
-        {error}
-        <button onClick={loadModerators} className="btn btn-secondary btn-small ml-2">
-          Try Again
-        </button>
-      </div>
+      <Card>
+        <div className="alert alert-error">
+          {error}
+          <Button onClick={loadModerators} variant="secondary" size="small">
+            Try Again
+          </Button>
+        </div>
+      </Card>
     )
   }
 
   return (
-    <div className="p-3" style={{ backgroundColor: 'var(--twitch-bg-medium)', borderRadius: '8px', border: '1px solid var(--twitch-border)' }}>
+    <Card>
       <div className="flex justify-between align-center mb-3">
         <h2 className="text-lg font-semibold text-primary">Bot Moderators</h2>
-        <button 
+        <Button 
           onClick={() => setShowSearch(!showSearch)}
-          className="btn btn-primary btn-small"
+          variant="primary" 
+          size="small"
         >
           {showSearch ? 'Cancel' : '+ Add Moderator'}
-        </button>
+        </Button>
       </div>
 
       <p className="text-muted mb-3 text-sm">
@@ -196,75 +199,40 @@ const Moderators: React.FC<ModeratorsProps> = ({ userId }) => {
 
       {/* Add Moderator Section */}
       {showSearch && (
-        <div className="mb-4 p-3 rounded" style={{ backgroundColor: 'var(--twitch-bg-light)', border: '1px solid var(--twitch-border)' }}>
+        <Card variant="flat" className="mb-4">
           <h3 className="mb-3 text-sm font-semibold text-secondary">Add New Moderator</h3>
           
-          <div className="search-input-container" ref={dropdownRef}>
-            <input
-              type="text"
-              className="form-input search-input"
-              placeholder="Search Twitch username..."
-              value={searchQuery}
-              onChange={handleSearchInputChange}
-              disabled={adding}
-              autoComplete="off"
-            />
-            
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('')
-                  setSearchResults([])
-                  setShowDropdown(false)
-                }}
-                className="clear-button"
-                disabled={adding}
+          <SearchableDropdown
+            ref={dropdownRef}
+            placeholder="Search Twitch username..."
+            value={searchQuery}
+            onChange={handleSearchInputChange}
+            onClear={() => {
+              setSearchQuery('')
+              setSearchResults([])
+              setShowDropdown(false)
+            }}
+            loading={searching}
+            disabled={adding}
+            showDropdown={showDropdown}
+            error={searchQuery.trim().length >= 2 && !searching && searchResults.length === 0 ? 
+              `No users found for "${searchQuery}". Make sure the username is spelled correctly.` : undefined}
+          >
+            {searchResults.map((user) => (
+              <ListItem
+                key={user.id}
+                onClick={() => addModerator(user.login)}
+                leftContent={<Avatar src={user.avatar} alt={user.display_name} size="medium" />}
+                clickable
               >
-                ✕
-              </button>
-            )}
-            
-            {searching && (
-              <div className="search-loading">
-                <div className="spinner"></div>
-              </div>
-            )}
-
-            {showDropdown && searchResults.length > 0 && (
-              <div className="search-dropdown">
-                {searchResults.map((user) => (
-                  <div 
-                    key={user.id} 
-                    className="search-result"
-                    onClick={() => addModerator(user.login)}
-                  >
-                    <div className="result-content">
-                      <img 
-                        src={user.avatar} 
-                        alt={user.display_name}
-                        className="result-image"
-                      />
-                      <div className="result-text">
-                        <div className="result-name">{user.display_name}</div>
-                        <div className="result-info">@{user.login}</div>
-                      </div>
-                      <div className="result-type" style={{ color: 'var(--twitch-purple)' }}>
-                        {moderators.some(m => m.twitch_id === user.id) ? '✓' : '+'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchQuery.trim().length >= 2 && !searching && searchResults.length === 0 && (
-              <div className="search-error">
-                No users found for "{searchQuery}". Make sure the username is spelled correctly.
-              </div>
-            )}
-          </div>
-        </div>
+                <div className="result-text">
+                  <div className="result-name">{user.display_name}</div>
+                  <div className="result-info">@{user.login}</div>
+                </div>
+              </ListItem>
+            ))}
+          </SearchableDropdown>
+        </Card>
       )}
 
       {/* Moderators List */}
@@ -273,25 +241,24 @@ const Moderators: React.FC<ModeratorsProps> = ({ userId }) => {
           <h3 className="mb-3 text-sm font-semibold text-secondary">Current Moderators ({moderators.length})</h3>
           <div className="space-y-2">
             {moderators.map((moderator) => (
-              <div key={moderator.id} className="flex align-center justify-between p-2 rounded" style={{ backgroundColor: 'var(--twitch-bg-light)', border: '1px solid var(--twitch-border)' }}>
-                <div className="flex align-center">
-                  <img 
-                    src={moderator.avatar} 
-                    alt={moderator.twitch_name}
-                    className="w-8 h-8 rounded-full mr-2"
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-primary">{moderator.twitch_name}</div>
-                    <div className="text-xs text-muted">Added: {new Date(moderator.added_at).toLocaleDateString()}</div>
-                  </div>
+              <ListItem
+                key={moderator.id}
+                left={<Avatar src={moderator.avatar} alt={moderator.twitch_name} size="medium" />}
+                right={
+                  <Button
+                    onClick={() => removeModerator(moderator.id)}
+                    variant="danger"
+                    size="small"
+                  >
+                    Remove
+                  </Button>
+                }
+              >
+                <div>
+                  <div className="text-sm font-medium text-primary">{moderator.twitch_name}</div>
+                  <div className="text-xs text-muted">Added: {new Date(moderator.added_at).toLocaleDateString()}</div>
                 </div>
-                <button
-                  onClick={() => removeModerator(moderator.id)}
-                  className="btn btn-danger btn-small"
-                >
-                  Remove
-                </button>
-              </div>
+              </ListItem>
             ))}
           </div>
         </div>
@@ -301,7 +268,7 @@ const Moderators: React.FC<ModeratorsProps> = ({ userId }) => {
           <p className="text-xs">Add moderators to allow them to use special bot commands.</p>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

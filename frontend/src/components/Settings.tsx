@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { StreamerSettings } from '../types'
-import LoadingSpinner from './LoadingSpinner'
+import { Button, Card, Spinner } from './ui'
 import AppleTimePicker from './AppleTimePicker'
 import { useToast } from '../contexts/ToastContext'
 import axios from 'axios'
@@ -94,26 +94,28 @@ const Settings: React.FC<SettingsProps> = ({ userId }) => {
   }
 
   if (loading) {
-    return <LoadingSpinner message="Loading settings..." />
+    return <Spinner size="large" />
   }
 
   if (error) {
     return (
-      <div className="alert alert-error">
-        {error}
-        <button onClick={loadSettings} className="btn btn-secondary btn-small" style={{ marginLeft: '1rem' }}>
-          Retry
-        </button>
-      </div>
+      <Card>
+        <div className="alert alert-error">
+          {error}
+          <Button onClick={loadSettings} variant="secondary" size="small" style={{ marginLeft: '1rem' }}>
+            Retry
+          </Button>
+        </div>
+      </Card>
     )
   }
 
   if (!settings) {
-    return <div>No settings found</div>
+    return <Card>No settings found</Card>
   }
 
   return (
-    <div className="settings-section">
+    <Card>
       <h3>Bot Settings</h3>
 
       <div className="settings-grid">
@@ -168,8 +170,8 @@ const Settings: React.FC<SettingsProps> = ({ userId }) => {
         </div>
       </div>
 
-      {saving && <LoadingSpinner message="Saving settings..." />}
-    </div>
+      {saving && <Spinner size="medium" />}
+    </Card>
   )
 }
 

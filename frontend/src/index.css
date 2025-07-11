@@ -1,3 +1,6 @@
+/* Import UI Kit Styles */
+@import './components/ui/ui-kit.css';
+
 /* Twitch-like Dark Theme */
 :root {
   --twitch-purple: #9146ff;

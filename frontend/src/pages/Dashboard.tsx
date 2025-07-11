@@ -2,7 +2,7 @@ import React from 'react'
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { Button, Spinner } from '../components/ui'
 import StatusIndicator from '../components/StatusIndicator'
 import QueueItem from '../components/QueueItem'
 import Settings from '../components/Settings'
@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
   if (loading && !profile && !queue) {
     return (
       <div className="container">
-        <LoadingSpinner message="Loading your dashboard..." />
+        <Spinner size="large" />
       </div>
     )
   }
@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {loading && <LoadingSpinner message="Loading dashboard..." />}
+      {loading && <Spinner size="large" />}
 
       {!loading && profile && (
         <>
@@ -195,13 +195,14 @@ const Dashboard: React.FC = () => {
                     <div>
                       <strong>Rewards Setup Issue:</strong> Channel point rewards are not properly configured.
                     </div>
-                    <button 
+                    <Button 
                       onClick={fixRewards}
                       disabled={fixingRewards}
-                      className="btn btn-warning btn-small"
+                      variant="secondary"
+                      size="small"
                     >
                       {fixingRewards ? '🔄 Fixing...' : '🔧 Fix Rewards'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

@@ -119,13 +119,20 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if rewards are actually configured by checking with the reward listener
+	rewardsConfigured := false
+	rewardListener := twitch.GetRewardListener(streamer.ChannelID)
+	if rewardListener != nil {
+		rewardsConfigured = rewardListener.CheckRewardsConfigured()
+	}
+
 	profile := UserProfileResponse{
 		ID:                streamer.ID,
 		ChannelID:         streamer.ChannelID,
 		Name:              streamer.Name,
 		HasSpotifyLinked:  streamer.SpotifyToken != "",
 		HasTwitchLinked:   streamer.TwitchToken != "",
-		RewardsConfigured: true, // TODO: Check if rewards are actually configured
+		RewardsConfigured: rewardsConfigured,
 	}
 
 	writeAPISuccess(w, profile)
@@ -757,6 +764,42 @@ func SpotifySearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeAPIResponse(w, response)
+}
+
+// FixRewards attempts to fix/recreate rewards for a user
+func FixRewards(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+
+	if userID == "" {
+		writeAPIError(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get user from database to verify they exist
+	database := db.GetDB()
+	if database == nil {
+		writeAPIError(w, "Database not available", http.StatusInternalServerError)
+		return
+	}
+
+	var streamer db.Streamer
+	result := database.Where("streamer_channel_id = ?", userID).First(&streamer)
+	if result.Error != nil {
+		writeAPIError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Try to fix rewards
+	if err := twitch.FixRewardsForChannel(userID); err != nil {
+		log.Printf("Error fixing rewards for user %s: %v", userID, err)
+		writeAPIError(w, fmt.Sprintf("Failed to fix rewards: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	writeAPISuccess(w, map[string]string{
+		"message": "Rewards have been fixed successfully",
+	})
 }
 
 // Helper functions

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	spotifylib "github.com/zmb3/spotify/v2"
 	"github.com/emcifuntik/twitch-spotify-request/internal/db"
 	"github.com/emcifuntik/twitch-spotify-request/internal/spotify"
 	"github.com/nicklaw5/helix/v2"
+	spotifylib "github.com/zmb3/spotify/v2"
 )
 
 // formatDuration formats seconds into a human readable time format
@@ -139,7 +139,7 @@ func NewRewardListener(streamer *db.Streamer) *RewardListener {
 	}
 
 	// Start periodic cleanup
-	rl.StartPeriodicCleanup()
+	rl.startPeriodicCleanup()
 
 	// Initialize cooldown manager cleanup (only once globally)
 	globalCooldownManager.StartPeriodicCleanup()
@@ -293,9 +293,12 @@ func (rl *RewardListener) setupRewards() error {
 
 // setupSongRequestReward creates the song request reward
 func (rl *RewardListener) setupSongRequestReward() error {
+	// Use a unique title to avoid conflicts
+	title := fmt.Sprintf("Request song (Bot %d)", rl.streamer.ID)
+
 	response, err := rl.client.CreateCustomReward(&helix.ChannelCustomRewardsParams{
 		BroadcasterID:       rl.streamer.ChannelID,
-		Title:               "Request song",
+		Title:               title,
 		Cost:                300,
 		Prompt:              "Enter artist and song name to add request",
 		IsUserInputRequired: true,
@@ -324,9 +327,12 @@ func (rl *RewardListener) setupSongRequestReward() error {
 
 // setupSkipSongReward creates the skip song reward
 func (rl *RewardListener) setupSkipSongReward() error {
+	// Use a unique title to avoid conflicts
+	title := fmt.Sprintf("Skip song (Bot %d)", rl.streamer.ID)
+
 	response, err := rl.client.CreateCustomReward(&helix.ChannelCustomRewardsParams{
 		BroadcasterID:       rl.streamer.ChannelID,
-		Title:               "Skip song",
+		Title:               title,
 		Cost:                1000,
 		Prompt:              "Skip current song",
 		IsUserInputRequired: false,
@@ -664,6 +670,24 @@ func GetRewardListener(channelID string) *RewardListener {
 	return rewardListeners[channelID]
 }
 
+// CheckRewardsStatus checks if rewards are properly configured for a channel
+func CheckRewardsStatus(channelID string) bool {
+	rl := GetRewardListener(channelID)
+	if rl == nil {
+		return false
+	}
+	return rl.CheckRewardsConfigured()
+}
+
+// FixRewardsForChannel attempts to fix rewards for a channel
+func FixRewardsForChannel(channelID string) error {
+	rl := GetRewardListener(channelID)
+	if rl == nil {
+		return fmt.Errorf("no reward listener found for channel %s", channelID)
+	}
+	return rl.FixRewards()
+}
+
 // HandleChatCommand processes chat commands
 func (rl *RewardListener) HandleChatCommand(userName, command, args string) {
 	log.Printf("Processing chat command: %s from user: %s with args: %s", command, userName, args)
@@ -862,18 +886,109 @@ func (rl *RewardListener) hasReward(rewardType RewardID) bool {
 	return false
 }
 
-// StartPeriodicCleanup starts background cleanup tasks
-func (rl *RewardListener) StartPeriodicCleanup() {
-	ticker := time.NewTicker(10 * time.Minute) // Run cleanup every 10 minutes
+// CheckRewardsConfigured checks if all required rewards are properly configured
+func (rl *RewardListener) CheckRewardsConfigured() bool {
+	// Check if both required rewards exist
+	hasRequestReward := rl.hasReward(RewardIDRequestSong)
+	hasSkipReward := rl.hasReward(RewardIDSkipSong)
 
-	go func() {
-		defer ticker.Stop()
-		for range ticker.C {
-			// Clean up duplicate store
-			spotify.GlobalDuplicateStore.Cleanup()
-			log.Printf("Performed periodic cleanup for streamer %d", rl.streamer.ID)
+	if !hasRequestReward || !hasSkipReward {
+		return false
+	}
+
+	// Additionally, verify that the rewards still exist on Twitch
+	// This is important because rewards might have been deleted from the Twitch side
+	return rl.verifyRewardsExistOnTwitch()
+}
+
+// verifyRewardsExistOnTwitch checks if our stored rewards still exist on Twitch
+func (rl *RewardListener) verifyRewardsExistOnTwitch() bool {
+	// Get all custom rewards from Twitch
+	resp, err := rl.client.GetCustomRewards(&helix.GetCustomRewardsParams{
+		BroadcasterID: rl.streamer.ChannelID,
+	})
+
+	if err != nil {
+		log.Printf("Error getting custom rewards for verification: %v", err)
+		return false
+	}
+
+	// Create a map of existing Twitch reward IDs
+	twitchRewards := make(map[string]bool)
+	for _, reward := range resp.Data.ChannelCustomRewards {
+		twitchRewards[reward.ID] = true
+	}
+
+	// Check if all our stored rewards still exist
+	for _, reward := range rl.rewards {
+		if !twitchRewards[reward.TwitchID] {
+			log.Printf("Reward %s (internal ID: %d) no longer exists on Twitch", reward.TwitchID, reward.InternalID)
+			return false
 		}
-	}()
+	}
+
+	return true
+}
+
+// FixRewards attempts to fix/recreate rewards
+func (rl *RewardListener) FixRewards() error {
+	log.Printf("Attempting to fix rewards for streamer %d", rl.streamer.ID)
+
+	// First, clean up any existing rewards that might conflict
+	if err := rl.cleanupExistingRewards(); err != nil {
+		log.Printf("Error cleaning up existing rewards: %v", err)
+		// Continue anyway - we'll try to create new ones
+	}
+
+	// Clear our internal rewards list
+	rl.rewards = []db.Reward{}
+
+	// Clear from database
+	database := db.GetDB()
+	if database != nil {
+		result := database.Where("reward_streamer = ?", rl.streamer.ID).Delete(&db.Reward{})
+		if result.Error != nil {
+			log.Printf("Error clearing rewards from database: %v", result.Error)
+		}
+	}
+
+	// Try to set up rewards again
+	return rl.setupRewards()
+}
+
+// cleanupExistingRewards removes any existing rewards with conflicting names
+func (rl *RewardListener) cleanupExistingRewards() error {
+	// Get all custom rewards from Twitch
+	resp, err := rl.client.GetCustomRewards(&helix.GetCustomRewardsParams{
+		BroadcasterID: rl.streamer.ChannelID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get existing rewards: %w", err)
+	}
+
+	// Delete any rewards that match our titles
+	rewardTitles := map[string]bool{
+		"Request song": true,
+		"Skip song":    true,
+	}
+
+	for _, reward := range resp.Data.ChannelCustomRewards {
+		if rewardTitles[reward.Title] {
+			log.Printf("Found existing reward: %s (ID: %s) - will be replaced", reward.Title, reward.ID)
+			// Try to delete the reward - this may fail if we don't have permissions
+			// but we'll continue anyway
+			_, err := rl.client.DeleteCustomRewards(&helix.DeleteCustomRewardsParams{
+				BroadcasterID: rl.streamer.ChannelID,
+				ID:            reward.ID,
+			})
+			if err != nil {
+				log.Printf("Could not delete existing reward %s: %v", reward.ID, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // HandleChatMessage handles chat messages from EventSub
@@ -905,4 +1020,18 @@ func HandleChatMessage(broadcasterUserID string, chatterUserID string, chatterUs
 	log.Printf("Processing chat command: %s with args: %s from user: %s", command, args, chatterUserName)
 	rl.HandleChatCommand(chatterUserName, command, args)
 	return nil
+}
+
+// startPeriodicCleanup starts background cleanup tasks
+func (rl *RewardListener) startPeriodicCleanup() {
+	ticker := time.NewTicker(10 * time.Minute) // Run cleanup every 10 minutes
+
+	go func() {
+		defer ticker.Stop()
+		for range ticker.C {
+			// Clean up duplicate store
+			spotify.GlobalDuplicateStore.Cleanup()
+			log.Printf("Performed periodic cleanup for streamer %d", rl.streamer.ID)
+		}
+	}()
 }

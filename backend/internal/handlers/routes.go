@@ -44,6 +44,7 @@ func RegisterRoutes(r *mux.Router) {
 	userAPI.HandleFunc("/profile", GetUserProfile).Methods("GET")
 	userAPI.HandleFunc("/queue", GetQueue).Methods("GET")
 	userAPI.HandleFunc("/settings", UpdateUserSettings).Methods("POST", "PUT")
+	userAPI.HandleFunc("/fix-rewards", FixRewards).Methods("POST")
 
 	// New settings and blocks endpoints
 	userAPI.HandleFunc("/config", GetSettings).Methods("GET")

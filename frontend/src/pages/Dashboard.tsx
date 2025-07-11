@@ -18,6 +18,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [authSuccess, setAuthSuccess] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<string>('overview')
+  const [fixingRewards, setFixingRewards] = useState<boolean>(false)
   
   const currentUserId = profile?.channel_id
 
@@ -63,6 +64,32 @@ const Dashboard: React.FC = () => {
       setError(err.response?.data?.error || err.message || 'Failed to load user data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fixRewards = async (): Promise<void> => {
+    if (!currentUserId) {
+      setError('No user ID available.')
+      return
+    }
+
+    try {
+      setFixingRewards(true)
+      setError(null)
+      
+      const response = await axios.post(`/api/user/${currentUserId}/fix-rewards`)
+      
+      if (response.data?.success) {
+        // Show success message
+        setAuthSuccess(true)
+        // Refresh the page data to update the rewards status
+        window.location.reload()
+      }
+    } catch (err: any) {
+      console.error('Error fixing rewards:', err)
+      setError(err.response?.data?.error || err.message || 'Failed to fix rewards')
+    } finally {
+      setFixingRewards(false)
     }
   }
 
@@ -158,6 +185,23 @@ const Dashboard: React.FC = () => {
               {(!profile.has_spotify_linked || !profile.has_twitch_linked) && (
                 <div className="alert alert-warning">
                   <strong>Setup Required:</strong> Connect both Spotify and Twitch to enable song requests.
+                </div>
+              )}
+              
+              {!profile.rewards_configured && profile.has_spotify_linked && profile.has_twitch_linked && (
+                <div className="alert alert-warning">
+                  <div className="flex justify-between align-center">
+                    <div>
+                      <strong>Rewards Setup Issue:</strong> Channel point rewards are not properly configured.
+                    </div>
+                    <button 
+                      onClick={fixRewards}
+                      disabled={fixingRewards}
+                      className="btn btn-warning btn-small"
+                    >
+                      {fixingRewards ? '🔄 Fixing...' : '🔧 Fix Rewards'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

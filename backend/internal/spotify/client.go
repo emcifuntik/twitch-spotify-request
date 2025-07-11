@@ -177,15 +177,15 @@ func (s *SpotifyClient) executeWithRetry(fn func() error) error {
 			strings.Contains(strings.ToLower(err.Error()), "unauthorized") ||
 			strings.Contains(strings.ToLower(err.Error()), "invalid access token") ||
 			strings.Contains(strings.ToLower(err.Error()), "token expired") {
-			
+
 			log.Printf("Detected 401/unauthorized error, attempting token refresh...")
-			
+
 			// Refresh the token
 			if refreshErr := s.refreshToken(); refreshErr != nil {
 				log.Printf("Token refresh failed: %v", refreshErr)
 				return fmt.Errorf("original error: %w, refresh error: %v", err, refreshErr)
 			}
-			
+
 			// Retry the original function
 			log.Printf("Retrying operation after token refresh...")
 			return fn()
@@ -278,7 +278,7 @@ func (s *SpotifyClient) EnqueueTrack(trackURI spotify.URI) error {
 // NextTrack skips to the next track
 func (s *SpotifyClient) NextTrack() error {
 	ctx := context.Background()
-	
+
 	err := s.executeWithRetry(func() error {
 		return s.client.Next(ctx)
 	})

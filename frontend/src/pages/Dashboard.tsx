@@ -8,6 +8,7 @@ import QueueItem from '../components/QueueItem'
 import Settings from '../components/Settings'
 import Blocks from '../components/Blocks'
 import Moderators from '../components/Moderators'
+import Commands from '../components/Commands'
 import { QueueData } from '../types'
 import axios from 'axios'
 
@@ -230,6 +231,12 @@ const Dashboard: React.FC = () => {
               👥 Moderators
             </button>
             <button 
+              className={`tab ${activeTab === 'commands' ? 'active' : ''}`}
+              onClick={() => setActiveTab('commands')}
+            >
+              💬 Commands
+            </button>
+            <button 
               className={`tab ${activeTab === 'blocks' ? 'active' : ''}`}
               onClick={() => setActiveTab('blocks')}
             >
@@ -288,6 +295,10 @@ const Dashboard: React.FC = () => {
 
           {activeTab === 'moderators' && currentUserId && (
             <Moderators userId={currentUserId} />
+          )}
+
+          {activeTab === 'commands' && currentUserId && (
+            <Commands userId={currentUserId} />
           )}
 
           {activeTab === 'blocks' && currentUserId && (

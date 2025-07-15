@@ -111,3 +111,21 @@ export interface SpotifySearchResult {
 export interface SpotifySearchResponse {
   results: SpotifySearchResult[];
 }
+
+// Command Types
+export interface Command {
+  id: number;
+  type: string;
+  name: string;
+  is_enabled: boolean;
+}
+
+export interface CommandRequest {
+  type: string;
+  name: string;
+  is_enabled: boolean;
+}
+
+export interface RequestModeToggle {
+  use_commands: boolean;
+}

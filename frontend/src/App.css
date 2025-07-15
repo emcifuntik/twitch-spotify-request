@@ -914,3 +914,142 @@ main {
     background: rgba(44, 44, 46, 0.8);
   }
 }
+
+/* Commands Component Styles */
+.commands-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.request-mode-toggle {
+  margin: 1rem 0;
+}
+
+.mode-description {
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.rewards-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-warning);
+  border-radius: 8px;
+  border: 1px solid var(--border-warning);
+}
+
+.rewards-info p {
+  margin: 0;
+  color: var(--text-warning);
+}
+
+.no-commands {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.no-commands p {
+  margin-bottom: 1rem;
+}
+
+.commands-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.command-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.command-type {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.command-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.command-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.command-prefix {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.command-text {
+  font-family: monospace;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.edit-command {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.command-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.commands-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .command-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .command-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .edit-command {
+    width: 100%;
+  }
+  
+  .edit-buttons {
+    margin-top: 0.5rem;
+  }
+}

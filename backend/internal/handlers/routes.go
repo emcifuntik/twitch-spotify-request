@@ -60,6 +60,12 @@ func RegisterRoutes(r *mux.Router) {
 	userAPI.HandleFunc("/moderators/{moderatorID}", RemoveModerator).Methods("DELETE")
 	userAPI.HandleFunc("/twitch/search", SearchTwitchUsers).Methods("GET")
 
+	// Command endpoints
+	userAPI.HandleFunc("/commands", GetCommands).Methods("GET")
+	userAPI.HandleFunc("/commands", UpdateCommand).Methods("POST", "PUT")
+	userAPI.HandleFunc("/commands/initialize", InitializeCommands).Methods("POST")
+	userAPI.HandleFunc("/request-mode", ToggleRequestMode).Methods("POST", "PUT")
+
 	// Enable CORS for all API routes
 	api.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

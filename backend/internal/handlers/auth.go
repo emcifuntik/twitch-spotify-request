@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/big"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/emcifuntik/twitch-spotify-request/internal/db"
 	"github.com/emcifuntik/twitch-spotify-request/internal/service"
 	"github.com/emcifuntik/twitch-spotify-request/internal/twitch"
+	"github.com/nicklaw5/helix/v2"
 	"golang.org/x/oauth2"
 )
 
@@ -101,6 +103,13 @@ func TwitchOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Fetch broadcaster type from Twitch API
+	if err := fetchAndUpdateBroadcasterType(valData.UserID, token.AccessToken); err != nil {
+		log.Printf("Warning: Failed to fetch broadcaster type for user %s: %v", valData.UserID, err)
+		// Don't fail the OAuth flow, just log the warning
+	}
+
 	http.Redirect(w, r, spotifyConfig.AuthCodeURL(spotifyState), http.StatusFound)
 }
 
@@ -245,4 +254,45 @@ func makeRandomString(n int) string {
 		}
 	}
 	return string(ret)
+}
+
+// fetchAndUpdateBroadcasterType fetches the broadcaster type from Twitch API and updates the database
+func fetchAndUpdateBroadcasterType(userID, accessToken string) error {
+	// Create a Twitch client
+	client, err := helix.NewClient(&helix.Options{
+		ClientID:        os.Getenv("TWITCH_CLIENT_ID"),
+		ClientSecret:    os.Getenv("TWITCH_CLIENT_SECRET"),
+		UserAccessToken: accessToken,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Twitch client: %w", err)
+	}
+
+	// Get user information from Twitch API
+	response, err := client.GetUsers(&helix.UsersParams{
+		IDs: []string{userID},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get user info from Twitch: %w", err)
+	}
+
+	if len(response.Data.Users) == 0 {
+		return fmt.Errorf("no user data found for user ID: %s", userID)
+	}
+
+	user := response.Data.Users[0]
+	broadcasterType := user.BroadcasterType
+
+	// If broadcaster type is empty, set it to "normal"
+	if broadcasterType == "" {
+		broadcasterType = "normal"
+	}
+
+	// Update the broadcaster type in the database
+	if err := db.UpdateStreamerBroadcasterType(db.GetDB(), userID, broadcasterType); err != nil {
+		return fmt.Errorf("failed to update broadcaster type in database: %w", err)
+	}
+
+	log.Printf("Updated broadcaster type to %s for user %s", broadcasterType, userID)
+	return nil
 }

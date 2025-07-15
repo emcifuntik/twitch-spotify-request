@@ -30,6 +30,9 @@ type UserProfileResponse struct {
 	HasSpotifyLinked  bool   `json:"has_spotify_linked"`
 	HasTwitchLinked   bool   `json:"has_twitch_linked"`
 	RewardsConfigured bool   `json:"rewards_configured"`
+	BroadcasterType   string `json:"broadcaster_type"`
+	UseCommands       bool   `json:"use_commands"`
+	CanUseRewards     bool   `json:"can_use_rewards"`
 }
 
 // QueueResponse represents queue data for API
@@ -116,6 +119,26 @@ type TwitchUserSearchResult struct {
 	Avatar      string `json:"avatar"`
 }
 
+// CommandResponse represents a command for API responses
+type CommandResponse struct {
+	ID        uint   `json:"id"`
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	IsEnabled bool   `json:"is_enabled"`
+}
+
+// CommandRequest represents a command update request
+type CommandRequest struct {
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	IsEnabled bool   `json:"is_enabled"`
+}
+
+// RequestModeToggleRequest represents a request to toggle between commands and rewards
+type RequestModeToggleRequest struct {
+	UseCommands bool `json:"use_commands"`
+}
+
 // GetUserProfile returns the user's profile information
 func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	// This is a simplified version - in production you'd get user ID from JWT/session
@@ -148,6 +171,13 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		rewardsConfigured = rewardListener.CheckRewardsConfigured()
 	}
 
+	// Check if user can use rewards based on broadcaster type
+	canUseRewards, err := db.CanUseRewards(database, streamer.ChannelID)
+	if err != nil {
+		log.Printf("Error checking reward eligibility: %v", err)
+		canUseRewards = false
+	}
+
 	profile := UserProfileResponse{
 		ID:                streamer.ID,
 		ChannelID:         streamer.ChannelID,
@@ -155,6 +185,9 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		HasSpotifyLinked:  streamer.SpotifyToken != "",
 		HasTwitchLinked:   streamer.TwitchToken != "",
 		RewardsConfigured: rewardsConfigured,
+		BroadcasterType:   streamer.BroadcasterType,
+		UseCommands:       streamer.UseCommands,
+		CanUseRewards:     canUseRewards,
 	}
 
 	writeAPISuccess(w, profile)

@@ -104,11 +104,16 @@ func TwitchOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("Twitch user %s (%s) authenticated successfully with scopes: %v\n", valData.Login, valData.UserID, valData.Scopes)
+	fmt.Printf("State for Spotify OAuth: %s\n", spotifyState)
+
 	// Fetch broadcaster type from Twitch API
 	if err := fetchAndUpdateBroadcasterType(valData.UserID, token.AccessToken); err != nil {
 		log.Printf("Warning: Failed to fetch broadcaster type for user %s: %v", valData.UserID, err)
 		// Don't fail the OAuth flow, just log the warning
 	}
+
+	twitch.InvalidateRewardListener(valData.UserID)
 
 	http.Redirect(w, r, spotifyConfig.AuthCodeURL(spotifyState), http.StatusFound)
 }
@@ -134,6 +139,10 @@ func SpotifyOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Database update failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	fmt.Printf("Spotify user authenticated successfully with state: %s\n", state)
+	fmt.Printf("Access Token: %s\n", token.AccessToken)
+	fmt.Printf("Refresh Token: %s\n", token.RefreshToken)
 
 	// Get user info to pass to the redirect and initialize listeners
 	streamer, err := db.GetStreamerBySpotifyState(db.GetDB(), state)

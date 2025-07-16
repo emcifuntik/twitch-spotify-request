@@ -91,6 +91,17 @@ func GetOrCreateRewardListener(streamer *db.Streamer) *RewardListener {
 	return NewRewardListener(streamer)
 }
 
+// InvalidateRewardListener invalidates the listener for a specific streamer
+func InvalidateRewardListener(streamerID string) {
+	if listener, exists := rewardListeners[streamerID]; exists {
+		log.Printf("Invalidating listener for streamer %s", streamerID)
+		listener.client = nil               // Invalidate the client
+		delete(rewardListeners, streamerID) // Remove from map
+	} else {
+		log.Printf("No listener found for streamer %s to invalidate", streamerID)
+	}
+}
+
 // NewRewardListener creates a new reward listener for a streamer
 func NewRewardListener(streamer *db.Streamer) *RewardListener {
 	httpClient := &http.Client{
@@ -148,26 +159,6 @@ func NewRewardListener(streamer *db.Streamer) *RewardListener {
 	AddStreamer(streamer.ChannelID)
 
 	return rl
-}
-
-// updateSpotifyToken updates the Spotify token in the database
-func updateSpotifyToken(streamerID uint, newToken string) error {
-	// Get database connection
-	database := db.GetDB() // Assuming there's a GetDB function
-	if database == nil {
-		log.Printf("Database not available for token update")
-		return fmt.Errorf("database not available")
-	}
-
-	// Update the streamer's Spotify token
-	result := database.Model(&db.Streamer{}).Where("streamer_id = ?", streamerID).Update("streamer_spotify_token", newToken)
-	if result.Error != nil {
-		log.Printf("Error updating Spotify token: %v", result.Error)
-		return result.Error
-	}
-
-	log.Printf("Spotify token updated for streamer %d", streamerID)
-	return nil
 }
 
 // updateSpotifyTokens updates both Spotify access and refresh tokens in the database

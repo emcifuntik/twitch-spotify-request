@@ -190,12 +190,9 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
               
-              {!profile.rewards_configured && profile.has_spotify_linked && profile.has_twitch_linked && (
+              {profile.has_spotify_linked && profile.has_twitch_linked && (
                 <div className="alert alert-warning">
                   <div className="flex justify-between align-center">
-                    <div>
-                      <strong>Rewards Setup Issue:</strong> Channel point rewards are not properly configured.
-                    </div>
                     <Button 
                       onClick={fixRewards}
                       disabled={fixingRewards}

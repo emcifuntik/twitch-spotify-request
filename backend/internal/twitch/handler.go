@@ -351,7 +351,7 @@ func (rl *RewardListener) setupSkipSongReward() error {
 }
 
 // HandleRewardRedemption handles reward redemptions from EventSub
-func HandleRewardRedemption(streamerID string, rewardID string, userID string, userName string, promptText string) error {
+func HandleRewardRedemption(streamerID string, redemptionID string, rewardID string, userID string, userName string, promptText string) error {
 	log.Printf("Handling reward redemption for streamer ID: %s", streamerID)
 
 	rl, exists := rewardListeners[streamerID]
@@ -361,11 +361,11 @@ func HandleRewardRedemption(streamerID string, rewardID string, userID string, u
 	}
 
 	log.Printf("Found RewardListener for streamer ID: %s", streamerID)
-	return rl.HandleRewardRedemption(rewardID, userID, userName, promptText)
+	return rl.HandleRewardRedemption(redemptionID, rewardID, userID, userName, promptText)
 }
 
 // HandleRewardRedemption processes individual reward redemptions
-func (rl *RewardListener) HandleRewardRedemption(rewardID string, userID string, userName string, promptText string) error {
+func (rl *RewardListener) HandleRewardRedemption(redemptionID string, rewardID string, userID string, userName string, promptText string) error {
 	log.Printf("Reward redeemed by %s (ID: %s) for reward ID: %s with input: %s", userName, userID, rewardID, promptText)
 
 	// Find the reward by Twitch ID
@@ -397,9 +397,9 @@ func (rl *RewardListener) HandleRewardRedemption(rewardID string, userID string,
 	// Handle the reward based on type
 	switch rewardType {
 	case RewardIDRequestSong:
-		return rl.handleSongRequest(userName, promptText, rewardID)
+		return rl.handleSongRequest(userName, promptText, redemptionID, rewardID)
 	case RewardIDSkipSong:
-		return rl.handleSongSkip(userName, rewardID)
+		return rl.handleSongSkip(userName, redemptionID, rewardID)
 	default:
 		log.Printf("Unknown reward type for reward ID %s, ignoring", rewardID)
 		return nil
@@ -407,7 +407,7 @@ func (rl *RewardListener) HandleRewardRedemption(rewardID string, userID string,
 }
 
 // handleSongRequest processes song request rewards
-func (rl *RewardListener) handleSongRequest(userName, query, rewardID string) error {
+func (rl *RewardListener) handleSongRequest(userName, query, redemptionID, rewardID string) error {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Panic in handleSongRequest: %v", r)
@@ -416,55 +416,55 @@ func (rl *RewardListener) handleSongRequest(userName, query, rewardID string) er
 
 	// Check if it's a Spotify URL
 	if spotify.IsSpotifyURL(query) {
-		return rl.handleSpotifyURL(userName, query, rewardID)
+		return rl.handleSpotifyURL(userName, query, redemptionID, rewardID)
 	}
 
 	// Search for the track
-	return rl.handleSearchQuery(userName, query, rewardID)
+	return rl.handleSearchQuery(userName, query, redemptionID, rewardID)
 }
 
 // handleSpotifyURL processes Spotify URL requests
-func (rl *RewardListener) handleSpotifyURL(userName, url, rewardID string) error {
+func (rl *RewardListener) handleSpotifyURL(userName, url, redemptionID, rewardID string) error {
 	trackID := spotify.GetTrackIDFromURL(url)
 	if trackID == "" {
 		rl.sendMessage(fmt.Sprintf("@%s ничего не найдено в Spotify", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	track, err := rl.spotifyClient.GetTrackByID(trackID)
 	if err != nil || track.URI == "" {
 		rl.sendMessage(fmt.Sprintf("@%s ничего не найдено в Spotify", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
-	return rl.enqueueTrack(userName, track, rewardID)
+	return rl.enqueueTrack(userName, track, redemptionID, rewardID)
 }
 
 // handleSearchQuery processes search query requests
-func (rl *RewardListener) handleSearchQuery(userName, query, rewardID string) error {
+func (rl *RewardListener) handleSearchQuery(userName, query, redemptionID, rewardID string) error {
 	searchResult, err := rl.spotifyClient.SearchTracks(query)
 	if err != nil {
 		log.Printf("Error searching tracks: %v", err)
 		rl.sendMessage(fmt.Sprintf("@%s ничего не найдено в Spotify", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	if len(searchResult.Tracks.Tracks) == 0 {
 		rl.sendMessage(fmt.Sprintf("@%s ничего не найдено в Spotify", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	track := &searchResult.Tracks.Tracks[0]
-	return rl.enqueueTrack(userName, track, rewardID)
+	return rl.enqueueTrack(userName, track, redemptionID, rewardID)
 }
 
 // enqueueTrack adds a track to the Spotify queue with enhanced validation
-func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTrack, rewardID string) error {
+func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTrack, redemptionID, rewardID string) error {
 	database := db.GetDB()
 	if database == nil {
 		log.Printf("Database not available for track validation")
 		rl.sendMessage(fmt.Sprintf("@%s произошла ошибка при обработке запроса", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	// Get artist IDs and track ID for blocking check
@@ -477,7 +477,7 @@ func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTr
 	// Check if track/artist is blocked
 	if db.IsBlocked(database, rl.streamer.ID, artistIDs, trackID) {
 		rl.sendMessage(fmt.Sprintf("@%s этот трек или исполнитель заблокирован", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	// Check max song length
@@ -486,7 +486,7 @@ func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTr
 		minutes := maxLength / 60
 		seconds := maxLength % 60
 		rl.sendMessage(fmt.Sprintf("@%s трек слишком длинный (макс. %d:%02d)", userName, minutes, seconds))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	// Check cooldown for the same song
@@ -497,13 +497,13 @@ func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTr
 		remaining := cooldownManager.GetRemainingCooldown(rl.streamer.ChannelID, string(track.URI), cooldownSeconds)
 		timeStr := formatDuration(remaining)
 		rl.sendMessage(fmt.Sprintf("@%s этот трек недавно играл, повторить можно через %s", userName, timeStr))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	// Check for duplicates (existing logic)
 	if spotify.GlobalDuplicateStore.Exists(string(track.URI)) {
 		rl.sendMessage(fmt.Sprintf("@%s этот трек уже играл за последний час", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	songName := spotify.SongItemToReadable(track)
@@ -512,7 +512,7 @@ func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTr
 	if err := rl.spotifyClient.EnqueueTrack(track.URI); err != nil {
 		log.Printf("Error enqueueing track: %v", err)
 		rl.sendMessage(fmt.Sprintf("@%s произошла ошибка при добавлении трека", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	// Add to duplicate store
@@ -522,23 +522,23 @@ func (rl *RewardListener) enqueueTrack(userName string, track *spotifylib.FullTr
 	cooldownManager.AddCooldown(rl.streamer.ChannelID, string(track.URI))
 
 	rl.sendMessage(fmt.Sprintf("@%s %s добавлена в очередь", userName, songName))
-	return rl.updateRedemptionStatus(rewardID, "FULFILLED")
+	return rl.updateRedemptionStatus(redemptionID, rewardID, "FULFILLED")
 }
 
 // handleSongSkip processes song skip rewards
-func (rl *RewardListener) handleSongSkip(userName, rewardID string) error {
+func (rl *RewardListener) handleSongSkip(userName, redemptionID, rewardID string) error {
 	if err := rl.spotifyClient.NextTrack(); err != nil {
 		log.Printf("Error skipping track: %v", err)
 		rl.sendMessage(fmt.Sprintf("@%s произошла ошибка при пропуске трека", userName))
-		return rl.updateRedemptionStatus(rewardID, "CANCELED")
+		return rl.updateRedemptionStatus(redemptionID, rewardID, "CANCELED")
 	}
 
 	rl.sendMessage(fmt.Sprintf("@%s трек пропущен по твоему запросу", userName))
-	return rl.updateRedemptionStatus(rewardID, "FULFILLED")
+	return rl.updateRedemptionStatus(redemptionID, rewardID, "FULFILLED")
 }
 
 // updateRedemptionStatus updates the status of a reward redemption
-func (rl *RewardListener) updateRedemptionStatus(redemptionID, status string) error {
+func (rl *RewardListener) updateRedemptionStatus(redemptionID, rewardID, status string) error {
 	// Find the reward ID - this is a simplified implementation
 	// In a real implementation, you'd store and lookup the reward mapping
 
@@ -547,15 +547,13 @@ func (rl *RewardListener) updateRedemptionStatus(redemptionID, status string) er
 	log.Printf("Would update redemption %s status to %s", redemptionID, status)
 
 	// Here's how you would do it with proper IDs:
-	// _, err := rl.client.ManageRedemption(&helix.ManageRedemptionParams{
-	//     BroadcasterID: rl.streamer.ChannelID,
-	//     RewardID:      actualRewardID,
-	//     RedemptionIDs: []string{redemptionID},
-	//     Status:        status,
-	// })
-	// return err
-
-	return nil
+	_, err := rl.client.UpdateChannelCustomRewardsRedemptionStatus(&helix.UpdateChannelCustomRewardsRedemptionStatusParams{
+		BroadcasterID: rl.streamer.ChannelID,
+		RewardID:      rewardID,
+		ID:            redemptionID,
+		Status:        status,
+	})
+	return err
 }
 
 // sendMessage sends a message to the chat using Helix API

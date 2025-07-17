@@ -38,7 +38,7 @@ func InitTwitchEventSub() (func(w http.ResponseWriter, r *http.Request), error) 
 			log.Printf("Error unmarshalling EventSub reward event: %v", err)
 			return
 		}
-		HandleRewardRedemption(data.BroadcasterUserID, data.Reward.ID, data.UserID, data.UserName, data.UserInput)
+		HandleRewardRedemption(data.BroadcasterUserID, data.ID, data.Reward.ID, data.UserID, data.UserName, data.UserInput)
 	})
 
 	// Handle chat message events

@@ -287,6 +287,28 @@ func (rl *RewardListener) setupSongRequestReward() error {
 	// Use a unique title to avoid conflicts
 	title := fmt.Sprintf("Request song (Bot %d)", rl.streamer.ID)
 
+	rewards, err := rl.client.GetCustomRewards(&helix.GetCustomRewardsParams{
+		BroadcasterID:         rl.streamer.ChannelID,
+		OnlyManageableRewards: true,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get existing rewards: %w", err)
+	}
+
+	if len(rewards.Data.ChannelCustomRewards) > 0 {
+		for _, reward := range rewards.Data.ChannelCustomRewards {
+			if strings.EqualFold(reward.Title, title) {
+				log.Printf("Song request reward already exists for streamer %d", rl.streamer.ID)
+				// Save the existing reward ID
+				if err := rl.saveReward(RewardIDRequestSong, reward.ID); err != nil {
+					log.Printf("Error saving existing song request reward to database: %v", err)
+				}
+				return nil // Reward already exists, no need to create again
+			}
+		}
+	}
+
 	response, err := rl.client.CreateCustomReward(&helix.ChannelCustomRewardsParams{
 		BroadcasterID:       rl.streamer.ChannelID,
 		Title:               title,
@@ -320,6 +342,28 @@ func (rl *RewardListener) setupSongRequestReward() error {
 func (rl *RewardListener) setupSkipSongReward() error {
 	// Use a unique title to avoid conflicts
 	title := fmt.Sprintf("Skip song (Bot %d)", rl.streamer.ID)
+
+	rewards, err := rl.client.GetCustomRewards(&helix.GetCustomRewardsParams{
+		BroadcasterID:         rl.streamer.ChannelID,
+		OnlyManageableRewards: true,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get existing rewards: %w", err)
+	}
+
+	if len(rewards.Data.ChannelCustomRewards) > 0 {
+		for _, reward := range rewards.Data.ChannelCustomRewards {
+			if strings.EqualFold(reward.Title, title) {
+				log.Printf("Skip song reward already exists for streamer %d", rl.streamer.ID)
+				// Save the existing reward ID
+				if err := rl.saveReward(RewardIDSkipSong, reward.ID); err != nil {
+					log.Printf("Error saving existing skip song reward to database: %v", err)
+				}
+				return nil // Reward already exists, no need to create again
+			}
+		}
+	}
 
 	response, err := rl.client.CreateCustomReward(&helix.ChannelCustomRewardsParams{
 		BroadcasterID:       rl.streamer.ChannelID,

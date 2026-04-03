@@ -9,10 +9,10 @@ type Streamer struct {
 	ID              uint          `gorm:"primaryKey;autoIncrement;column:streamer_id"`
 	ChannelID       string        `gorm:"column:streamer_channel_id;size:64;unique;not null"`
 	Name            string        `gorm:"column:streamer_name;size:64;not null"`
-	TwitchToken     string        `gorm:"column:streamer_twitch_token;size:256"`
-	TwitchRefresh   string        `gorm:"column:streamer_twitch_refresh;size:256"`
-	SpotifyToken    string        `gorm:"column:streamer_spotify_token;size:256"`
-	SpotifyRefresh  string        `gorm:"column:streamer_spotify_refresh;size:256"`
+	TwitchToken     string        `gorm:"column:streamer_twitch_token;type:text"`
+	TwitchRefresh   string        `gorm:"column:streamer_twitch_refresh;type:text"`
+	SpotifyToken    string        `gorm:"column:streamer_spotify_token;type:text"`
+	SpotifyRefresh  string        `gorm:"column:streamer_spotify_refresh;type:text"`
 	SpotifyState    string        `gorm:"column:streamer_spotify_state;size:64;unique"`
 	BroadcasterType string        `gorm:"column:broadcaster_type;size:16;default:''"` // "", "affiliate", "partner"
 	UseCommands     bool          `gorm:"column:use_commands;default:true"`           // true for commands, false for rewards

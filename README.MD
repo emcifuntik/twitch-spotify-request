@@ -107,8 +107,14 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
 ### Auth Endpoints
 - `GET /auth` - Start authentication flow
+- `GET /api/spotify/authorize` - Reconnect Spotify for the signed-in user
 - `GET /oauth/twitch` - Twitch OAuth callback
 - `GET /oauth/spotify` - Spotify OAuth callback
+
+Spotify refresh tokens expire six months after authorization. When Spotify
+returns `invalid_grant`, the bot clears the unusable token pair and the dashboard
+starts the Spotify reconnection flow. Spotify catalog search is capped at 10
+results per request to match the current Development Mode API limit.
 
 ## Frontend Routes
 

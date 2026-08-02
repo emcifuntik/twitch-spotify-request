@@ -58,6 +58,24 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, twitchConfig.AuthCodeURL(""), http.StatusFound)
 }
 
+// SpotifyAuthHandler starts a Spotify-only reauthorization for a user who is
+// already signed in to the dashboard.
+func SpotifyAuthHandler(w http.ResponseWriter, r *http.Request) {
+	claims, ok := GetClaimsFromContext(r)
+	if !ok {
+		writeAPIError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	state := makeRandomString(32)
+	if err := db.UpdateSpotifyState(db.GetDB(), claims.ChannelID, state); err != nil {
+		http.Error(w, "Failed to start Spotify authorization", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, spotifyConfig.AuthCodeURL(state), http.StatusFound)
+}
+
 func TwitchOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -119,6 +137,11 @@ func TwitchOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SpotifyOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	if oauthError := r.URL.Query().Get("error"); oauthError != "" {
+		http.Error(w, "Spotify authorization was not completed", http.StatusBadRequest)
+		return
+	}
+
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	if code == "" || state == "" {
@@ -140,15 +163,14 @@ func SpotifyOAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("Spotify user authenticated successfully with state: %s\n", state)
-	fmt.Printf("Access Token: %s\n", token.AccessToken)
-	fmt.Printf("Refresh Token: %s\n", token.RefreshToken)
+	log.Printf("Spotify user authenticated successfully")
 
 	// Get user info to pass to the redirect and initialize listeners
 	streamer, err := db.GetStreamerBySpotifyState(db.GetDB(), state)
 	if err == nil && streamer != nil {
-		// Initialize reward and chat listeners for the newly authenticated user (idempotent)
+		// Replace any listener holding the previous Spotify token pair.
 		log.Printf("Initializing listeners for user: %s (%s)", streamer.Name, streamer.ChannelID)
+		twitch.InvalidateRewardListener(streamer.ChannelID)
 		twitch.GetOrCreateRewardListener(streamer)
 
 		// Generate JWT token

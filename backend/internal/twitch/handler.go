@@ -2,6 +2,7 @@ package twitch
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -131,6 +132,9 @@ func NewRewardListener(streamer *db.Streamer) *RewardListener {
 		func(accessToken, refreshToken string) error {
 			return updateSpotifyTokens(streamer.ID, accessToken, refreshToken)
 		},
+		func() error {
+			return invalidateSpotifyTokens(streamer.ID)
+		},
 	)
 
 	rl := &RewardListener{
@@ -170,26 +174,29 @@ func updateSpotifyTokens(streamerID uint, accessToken, refreshToken string) erro
 		return fmt.Errorf("database not available")
 	}
 
-	// Update both tokens
-	updates := map[string]interface{}{
-		"streamer_spotify_token": accessToken,
-	}
-
-	// Only update refresh token if it's provided (not empty)
-	if refreshToken != "" {
-		updates["streamer_spotify_refresh"] = refreshToken
-		log.Printf("Updating both access and refresh tokens for streamer %d", streamerID)
-	} else {
-		log.Printf("Updating only access token for streamer %d", streamerID)
-	}
-
-	result := database.Model(&db.Streamer{}).Where("streamer_id = ?", streamerID).Updates(updates)
-	if result.Error != nil {
-		log.Printf("Error updating Spotify tokens: %v", result.Error)
-		return result.Error
+	if err := db.UpdateSpotifyTokens(database, streamerID, accessToken, refreshToken); err != nil {
+		log.Printf("Error updating Spotify tokens: %v", err)
+		return err
 	}
 
 	log.Printf("Spotify tokens updated successfully for streamer %d", streamerID)
+	return nil
+}
+
+// invalidateSpotifyTokens removes an expired or revoked Spotify token pair so
+// the UI can require a fresh authorization instead of retrying forever.
+func invalidateSpotifyTokens(streamerID uint) error {
+	database := db.GetDB()
+	if database == nil {
+		return fmt.Errorf("database not available")
+	}
+
+	if err := db.InvalidateSpotifyTokens(database, streamerID); err != nil {
+		log.Printf("Error invalidating Spotify tokens for streamer %d: %v", streamerID, err)
+		return err
+	}
+
+	log.Printf("Spotify authorization for streamer %d requires reconnection", streamerID)
 	return nil
 }
 
@@ -666,7 +673,18 @@ func (rl *RewardListener) GetQueueData() (*SongQueueData, error) {
 	}
 
 	currentTrack, err := rl.spotifyClient.GetCurrentTrack()
-	if err != nil || currentTrack.Item == nil {
+	if err != nil {
+		if errors.Is(err, spotify.ErrReauthorizationRequired) {
+			return nil, err
+		}
+		return &SongQueueData{
+			Queue:        []spotifylib.FullTrack{},
+			CurrentTrack: nil,
+			Duration:     0,
+			Progress:     0,
+		}, nil
+	}
+	if currentTrack.Item == nil {
 		return &SongQueueData{
 			Queue:        []spotifylib.FullTrack{},
 			CurrentTrack: nil,
@@ -678,6 +696,9 @@ func (rl *RewardListener) GetQueueData() (*SongQueueData, error) {
 	// Get Spotify's native queue
 	spotifyQueue, err := rl.spotifyClient.GetQueue()
 	if err != nil {
+		if errors.Is(err, spotify.ErrReauthorizationRequired) {
+			return nil, err
+		}
 		log.Printf("Error getting Spotify queue: %v", err)
 		return &SongQueueData{
 			Queue:        []spotifylib.FullTrack{},
@@ -696,6 +717,11 @@ func (rl *RewardListener) GetQueueData() (*SongQueueData, error) {
 
 	rl.lastQueueCalcTime = now
 	return rl.lastQueue, nil
+}
+
+// SearchSpotify searches Spotify's catalog using the listener's refresh-aware client.
+func (rl *RewardListener) SearchSpotify(query string, searchType spotifylib.SearchType, limit int) (*spotifylib.SearchResult, error) {
+	return rl.spotifyClient.Search(query, searchType, limit)
 }
 
 // GetRewardListener returns the reward listener for a given channel ID

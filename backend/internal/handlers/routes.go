@@ -37,6 +37,7 @@ func RegisterRoutes(r *mux.Router) {
 	authAPI := api.PathPrefix("").Subrouter()
 	authAPI.Use(AuthMiddleware)
 	authAPI.HandleFunc("/user/current", GetCurrentUser).Methods("GET")
+	authAPI.HandleFunc("/spotify/authorize", SpotifyAuthHandler).Methods("GET")
 
 	// User-specific routes (require authentication and user validation)
 	userAPI := authAPI.PathPrefix("/user/{userID}").Subrouter()

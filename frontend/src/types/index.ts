@@ -3,6 +3,7 @@ export interface APIResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+  code?: string;
   message?: string;
 }
 
@@ -17,6 +18,7 @@ export interface UserProfile {
   channel_id: string;
   name: string;
   has_spotify_linked: boolean;
+  spotify_reauth_required: boolean;
   has_twitch_linked: boolean;
   rewards_configured: boolean;
 }

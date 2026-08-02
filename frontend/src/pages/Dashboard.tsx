@@ -186,7 +186,23 @@ const Dashboard: React.FC = () => {
 
               {(!profile.has_spotify_linked || !profile.has_twitch_linked) && (
                 <div className="alert alert-warning">
-                  <strong>Setup Required:</strong> Connect both Spotify and Twitch to enable song requests.
+                  <div className="flex justify-between align-center gap-2">
+                    <div>
+                      <strong>{profile.spotify_reauth_required ? 'Spotify authorization expired:' : 'Setup Required:'}</strong>{' '}
+                      {profile.spotify_reauth_required
+                        ? 'Spotify now requires a new authorization after six months.'
+                        : 'Connect both Spotify and Twitch to enable song requests.'}
+                    </div>
+                    {!profile.has_spotify_linked && profile.has_twitch_linked && (
+                      <Button
+                        onClick={() => { window.location.href = '/api/spotify/authorize' }}
+                        variant="secondary"
+                        size="small"
+                      >
+                        {profile.spotify_reauth_required ? 'Reconnect Spotify' : 'Connect Spotify'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
               

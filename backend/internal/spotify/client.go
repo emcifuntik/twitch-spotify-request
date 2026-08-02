@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,19 +29,55 @@ type TokenRefreshResponse struct {
 	Scope        string `json:"scope"`
 }
 
+// TokenErrorResponse represents an OAuth error returned by Spotify's token endpoint.
+type TokenErrorResponse struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+// ErrReauthorizationRequired means the refresh token is no longer usable and
+// the user must complete Spotify's authorization flow again.
+var ErrReauthorizationRequired = errors.New("spotify reauthorization required")
+
 // SpotifyClient wraps the zmb3/spotify client with custom token refresh
 type SpotifyClient struct {
 	client         *spotify.Client
 	onTokenRefresh func(accessToken, refreshToken string) error
+	onTokenInvalid func() error
 	auth           *spotifyauth.Authenticator
 	currentToken   *oauth2.Token
 	clientID       string
 	clientSecret   string
+	tokenURL       string
+	refreshClient  *http.Client
 	mutex          sync.RWMutex
 }
 
 // NewSpotifyClient creates a new Spotify API client using zmb3/spotify with custom token refresh
-func NewSpotifyClient(accessToken, refreshToken string, onTokenRefresh func(string, string) error) *SpotifyClient {
+func NewSpotifyClient(
+	accessToken,
+	refreshToken string,
+	onTokenRefresh func(string, string) error,
+	onTokenInvalid func() error,
+) *SpotifyClient {
+	return newSpotifyClient(
+		accessToken,
+		refreshToken,
+		onTokenRefresh,
+		onTokenInvalid,
+		"https://accounts.spotify.com/api/token",
+		&http.Client{Timeout: 10 * time.Second},
+	)
+}
+
+func newSpotifyClient(
+	accessToken,
+	refreshToken string,
+	onTokenRefresh func(string, string) error,
+	onTokenInvalid func() error,
+	tokenURL string,
+	refreshClient *http.Client,
+) *SpotifyClient {
 	// Get client credentials from environment
 	clientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
@@ -79,10 +116,13 @@ func NewSpotifyClient(accessToken, refreshToken string, onTokenRefresh func(stri
 	return &SpotifyClient{
 		client:         client,
 		onTokenRefresh: onTokenRefresh,
+		onTokenInvalid: onTokenInvalid,
 		auth:           auth,
 		currentToken:   token,
 		clientID:       clientID,
 		clientSecret:   clientSecret,
+		tokenURL:       tokenURL,
+		refreshClient:  refreshClient,
 	}
 }
 
@@ -102,7 +142,7 @@ func (s *SpotifyClient) refreshToken() error {
 	data.Set("refresh_token", s.currentToken.RefreshToken)
 
 	// Create the HTTP request
-	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", s.tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return fmt.Errorf("failed to create refresh request: %w", err)
 	}
@@ -112,8 +152,7 @@ func (s *SpotifyClient) refreshToken() error {
 	req.Header.Set("User-Agent", "twitch-spotify-request/1.0")
 
 	// Make the request
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := s.refreshClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to refresh token: %w", err)
 	}
@@ -126,7 +165,27 @@ func (s *SpotifyClient) refreshToken() error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("token refresh failed with status %d: %s", resp.StatusCode, string(body))
+		var tokenErr TokenErrorResponse
+		if err := json.Unmarshal(body, &tokenErr); err == nil && tokenErr.Error == "invalid_grant" {
+			// Spotify refresh tokens expire after six months. They can also be
+			// revoked, and both cases are reported as invalid_grant. Retrying the
+			// same token cannot succeed, so remove it and require authorization.
+			s.currentToken = &oauth2.Token{}
+			s.client = spotify.New(s.auth.Client(context.Background(), s.currentToken))
+
+			if s.onTokenInvalid != nil {
+				if callbackErr := s.onTokenInvalid(); callbackErr != nil {
+					return fmt.Errorf("%w: failed to clear saved tokens: %v", ErrReauthorizationRequired, callbackErr)
+				}
+			}
+
+			return ErrReauthorizationRequired
+		}
+
+		if tokenErr.Error != "" {
+			return fmt.Errorf("token refresh failed with status %d: %s", resp.StatusCode, tokenErr.Error)
+		}
+		return fmt.Errorf("token refresh failed with status %d", resp.StatusCode)
 	}
 
 	// Parse the response
@@ -135,14 +194,18 @@ func (s *SpotifyClient) refreshToken() error {
 		return fmt.Errorf("failed to parse refresh response: %w", err)
 	}
 
-	log.Printf("Token refresh successful - new access token: %s", truncateToken(tokenResp.AccessToken))
+	if tokenResp.AccessToken == "" {
+		return fmt.Errorf("token refresh response did not include an access token")
+	}
+	log.Printf("Spotify token refresh successful")
 
-	// Update the current token
+	// Expiry is intentionally omitted. executeWithRetry owns refreshes so every
+	// replacement token is persisted; the oauth2 transport must not refresh
+	// silently behind the callbacks.
 	newToken := &oauth2.Token{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		TokenType:    tokenResp.TokenType,
-		Expiry:       time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
 	}
 
 	// If no new refresh token was provided, keep the old one
@@ -171,35 +234,56 @@ func (s *SpotifyClient) refreshToken() error {
 // executeWithRetry executes a function and retries with token refresh on 401 errors
 func (s *SpotifyClient) executeWithRetry(fn func() error) error {
 	err := fn()
-	if err != nil {
-		// Check if it's a 401 error
-		if strings.Contains(strings.ToLower(err.Error()), "401") ||
-			strings.Contains(strings.ToLower(err.Error()), "unauthorized") ||
-			strings.Contains(strings.ToLower(err.Error()), "invalid access token") ||
-			strings.Contains(strings.ToLower(err.Error()), "token expired") {
+	if err != nil && isUnauthorized(err) {
+		log.Printf("Detected 401/unauthorized error, attempting token refresh...")
 
-			log.Printf("Detected 401/unauthorized error, attempting token refresh...")
-
-			// Refresh the token
-			if refreshErr := s.refreshToken(); refreshErr != nil {
-				log.Printf("Token refresh failed: %v", refreshErr)
-				return fmt.Errorf("original error: %w, refresh error: %v", err, refreshErr)
-			}
-
-			// Retry the original function
-			log.Printf("Retrying operation after token refresh...")
-			return fn()
+		// Refresh the token
+		if refreshErr := s.refreshToken(); refreshErr != nil {
+			log.Printf("Token refresh failed: %v", refreshErr)
+			return fmt.Errorf("spotify request failed (%v): %w", err, refreshErr)
 		}
+
+		// Retry the original function
+		log.Printf("Retrying operation after token refresh...")
+		return fn()
 	}
 	return err
 }
 
-// truncateToken truncates a token for logging (security)
-func truncateToken(token string) string {
-	if len(token) > 8 {
-		return token[:8] + "..."
+func isUnauthorized(err error) bool {
+	var spotifyErr spotify.Error
+	if errors.As(err, &spotifyErr) {
+		return spotifyErr.Status == http.StatusUnauthorized
 	}
-	return token
+
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "401") ||
+		strings.Contains(message, "unauthorized") ||
+		strings.Contains(message, "invalid access token") ||
+		strings.Contains(message, "token expired")
+}
+
+// Search searches Spotify's catalog and refreshes an expired access token once.
+func (s *SpotifyClient) Search(query string, searchType spotify.SearchType, limit int) (*spotify.SearchResult, error) {
+	ctx := context.Background()
+	var results *spotify.SearchResult
+
+	err := s.executeWithRetry(func() error {
+		var err error
+		results, err = s.apiClient().Search(ctx, query, searchType, spotify.Limit(limit))
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search Spotify: %w", err)
+	}
+
+	return results, nil
+}
+
+func (s *SpotifyClient) apiClient() *spotify.Client {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.client
 }
 
 // SongItemToReadable converts a Spotify track to a readable format
@@ -241,7 +325,7 @@ func (s *SpotifyClient) SearchTracks(query string) (*spotify.SearchResult, error
 
 	err := s.executeWithRetry(func() error {
 		var err error
-		results, err = s.client.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
+		results, err = s.apiClient().Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
 		return err
 	})
 
@@ -266,7 +350,7 @@ func (s *SpotifyClient) EnqueueTrack(trackURI spotify.URI) error {
 	log.Printf("Enqueueing track - URI: %s, ID: %s", uriStr, trackID)
 
 	err := s.executeWithRetry(func() error {
-		return s.client.QueueSong(ctx, trackID)
+		return s.apiClient().QueueSong(ctx, trackID)
 	})
 
 	if err != nil {
@@ -280,7 +364,7 @@ func (s *SpotifyClient) NextTrack() error {
 	ctx := context.Background()
 
 	err := s.executeWithRetry(func() error {
-		return s.client.Next(ctx)
+		return s.apiClient().Next(ctx)
 	})
 
 	if err != nil {
@@ -296,7 +380,7 @@ func (s *SpotifyClient) GetCurrentTrack() (*spotify.CurrentlyPlaying, error) {
 
 	err := s.executeWithRetry(func() error {
 		var err error
-		current, err = s.client.PlayerCurrentlyPlaying(ctx)
+		current, err = s.apiClient().PlayerCurrentlyPlaying(ctx)
 		return err
 	})
 
@@ -313,7 +397,7 @@ func (s *SpotifyClient) GetTrackByID(trackID string) (*spotify.FullTrack, error)
 
 	err := s.executeWithRetry(func() error {
 		var err error
-		track, err = s.client.GetTrack(ctx, spotify.ID(trackID))
+		track, err = s.apiClient().GetTrack(ctx, spotify.ID(trackID))
 		return err
 	})
 
@@ -330,7 +414,7 @@ func (s *SpotifyClient) GetRecentlyPlayed(limit int) ([]spotify.RecentlyPlayedIt
 
 	err := s.executeWithRetry(func() error {
 		var err error
-		items, err = s.client.PlayerRecentlyPlayed(ctx)
+		items, err = s.apiClient().PlayerRecentlyPlayed(ctx)
 		return err
 	})
 
@@ -352,7 +436,7 @@ func (s *SpotifyClient) SetVolume(volume int) error {
 	ctx := context.Background()
 
 	err := s.executeWithRetry(func() error {
-		return s.client.Volume(ctx, volume)
+		return s.apiClient().Volume(ctx, volume)
 	})
 
 	if err != nil {
@@ -371,7 +455,7 @@ func (s *SpotifyClient) GetQueue() (*spotify.Queue, error) {
 
 	err := s.executeWithRetry(func() error {
 		var err error
-		queue, err = s.client.GetQueue(ctx)
+		queue, err = s.apiClient().GetQueue(ctx)
 		return err
 	})
 

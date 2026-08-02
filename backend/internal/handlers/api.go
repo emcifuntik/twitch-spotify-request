@@ -2,15 +2,18 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/emcifuntik/twitch-spotify-request/internal/db"
+	spotifyapi "github.com/emcifuntik/twitch-spotify-request/internal/spotify"
 	"github.com/emcifuntik/twitch-spotify-request/internal/twitch"
 	"github.com/gorilla/mux"
+	spotifylib "github.com/zmb3/spotify/v2"
 	"gorm.io/gorm"
 )
 
@@ -19,20 +22,22 @@ type APIResponse struct {
 	Success bool        `json:"success"`
 	Data    interface{} `json:"data,omitempty"`
 	Error   string      `json:"error,omitempty"`
+	Code    string      `json:"code,omitempty"`
 	Message string      `json:"message,omitempty"`
 }
 
 // UserProfileResponse represents user profile data
 type UserProfileResponse struct {
-	ID                uint   `json:"id"`
-	ChannelID         string `json:"channel_id"`
-	Name              string `json:"name"`
-	HasSpotifyLinked  bool   `json:"has_spotify_linked"`
-	HasTwitchLinked   bool   `json:"has_twitch_linked"`
-	RewardsConfigured bool   `json:"rewards_configured"`
-	BroadcasterType   string `json:"broadcaster_type"`
-	UseCommands       bool   `json:"use_commands"`
-	CanUseRewards     bool   `json:"can_use_rewards"`
+	ID                    uint   `json:"id"`
+	ChannelID             string `json:"channel_id"`
+	Name                  string `json:"name"`
+	HasSpotifyLinked      bool   `json:"has_spotify_linked"`
+	SpotifyReauthRequired bool   `json:"spotify_reauth_required"`
+	HasTwitchLinked       bool   `json:"has_twitch_linked"`
+	RewardsConfigured     bool   `json:"rewards_configured"`
+	BroadcasterType       string `json:"broadcaster_type"`
+	UseCommands           bool   `json:"use_commands"`
+	CanUseRewards         bool   `json:"can_use_rewards"`
 }
 
 // QueueResponse represents queue data for API
@@ -179,15 +184,16 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile := UserProfileResponse{
-		ID:                streamer.ID,
-		ChannelID:         streamer.ChannelID,
-		Name:              streamer.Name,
-		HasSpotifyLinked:  streamer.SpotifyToken != "",
-		HasTwitchLinked:   streamer.TwitchToken != "",
-		RewardsConfigured: rewardsConfigured,
-		BroadcasterType:   streamer.BroadcasterType,
-		UseCommands:       streamer.UseCommands,
-		CanUseRewards:     canUseRewards,
+		ID:                    streamer.ID,
+		ChannelID:             streamer.ChannelID,
+		Name:                  streamer.Name,
+		HasSpotifyLinked:      streamer.SpotifyToken != "" && streamer.SpotifyRefresh != "" && !streamer.SpotifyReauthRequired,
+		SpotifyReauthRequired: streamer.SpotifyReauthRequired,
+		HasTwitchLinked:       streamer.TwitchToken != "",
+		RewardsConfigured:     rewardsConfigured,
+		BroadcasterType:       streamer.BroadcasterType,
+		UseCommands:           streamer.UseCommands,
+		CanUseRewards:         canUseRewards,
 	}
 
 	writeAPISuccess(w, profile)
@@ -214,6 +220,10 @@ func GetQueue(w http.ResponseWriter, r *http.Request) {
 	queueData, err := rewardListener.GetQueueData()
 	if err != nil {
 		log.Printf("Error getting queue data: %v", err)
+		if errors.Is(err, spotifyapi.ErrReauthorizationRequired) {
+			writeAPIErrorWithCode(w, "Spotify authorization expired; reconnect Spotify", "spotify_reauth_required", http.StatusPreconditionRequired)
+			return
+		}
 		writeAPIError(w, "Failed to get queue data", http.StatusInternalServerError)
 		return
 	}
@@ -400,7 +410,7 @@ func GetStreamers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var streamers []db.Streamer
-	result := database.Where("streamer_spotify_token != '' AND streamer_spotify_token IS NOT NULL AND streamer_twitch_token != '' AND streamer_twitch_token IS NOT NULL").Find(&streamers)
+	result := database.Where("streamer_spotify_token != '' AND streamer_spotify_token IS NOT NULL AND streamer_spotify_refresh != '' AND streamer_spotify_refresh IS NOT NULL AND streamer_spotify_reauth_required = ? AND streamer_twitch_token != '' AND streamer_twitch_token IS NOT NULL", false).Find(&streamers)
 	if result.Error != nil {
 		log.Printf("Error getting streamers: %v", result.Error)
 		writeAPIError(w, "Failed to get streamers", http.StatusInternalServerError)
@@ -468,12 +478,13 @@ func GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile := UserProfileResponse{
-		ID:                streamer.ID,
-		ChannelID:         streamer.ChannelID,
-		Name:              streamer.Name,
-		HasSpotifyLinked:  streamer.SpotifyToken != "",
-		HasTwitchLinked:   streamer.TwitchToken != "",
-		RewardsConfigured: true, // You might want to add more logic here
+		ID:                    streamer.ID,
+		ChannelID:             streamer.ChannelID,
+		Name:                  streamer.Name,
+		HasSpotifyLinked:      streamer.SpotifyToken != "" && streamer.SpotifyRefresh != "" && !streamer.SpotifyReauthRequired,
+		SpotifyReauthRequired: streamer.SpotifyReauthRequired,
+		HasTwitchLinked:       streamer.TwitchToken != "",
+		RewardsConfigured:     true, // You might want to add more logic here
 	}
 
 	writeAPIResponse(w, profile)
@@ -692,7 +703,7 @@ func SpotifySearch(w http.ResponseWriter, r *http.Request) {
 
 	limit := 10
 	if limitStr != "" {
-		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 50 {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 10 {
 			limit = parsedLimit
 		}
 	}
@@ -710,108 +721,75 @@ func SpotifySearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if streamer.SpotifyToken == "" {
-		writeAPIError(w, "Spotify not connected", http.StatusUnauthorized)
+	if streamer.SpotifyToken == "" || streamer.SpotifyRefresh == "" || streamer.SpotifyReauthRequired {
+		writeAPIErrorWithCode(w, "Spotify authorization is required", "spotify_reauth_required", http.StatusPreconditionRequired)
 		return
 	}
 
-	// Make request to Spotify Web API
-	spotifyURL := fmt.Sprintf("https://api.spotify.com/v1/search?q=%s&type=%s&limit=%d",
-		url.QueryEscape(query), searchType, limit)
-
-	req, err := http.NewRequest("GET", spotifyURL, nil)
+	searchMask, err := parseSpotifySearchType(searchType)
 	if err != nil {
-		writeAPIError(w, "Failed to create request", http.StatusInternalServerError)
+		writeAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	req.Header.Set("Authorization", "Bearer "+streamer.SpotifyToken)
+	rewardListener := twitch.GetRewardListener(streamer.ChannelID)
+	if rewardListener == nil {
+		rewardListener = twitch.GetOrCreateRewardListener(&streamer)
+	}
+	if rewardListener == nil {
+		writeAPIError(w, "Spotify client is unavailable", http.StatusInternalServerError)
+		return
+	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	spotifyResp, err := rewardListener.SearchSpotify(query, searchMask, limit)
 	if err != nil {
-		writeAPIError(w, "Failed to search Spotify", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 401 {
-		// Token might be expired, try to refresh
-		// TODO: Implement token refresh logic here
-		writeAPIError(w, "Spotify token expired", http.StatusUnauthorized)
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		writeAPIError(w, "Spotify API error", http.StatusInternalServerError)
-		return
-	}
-
-	var spotifyResp struct {
-		Artists struct {
-			Items []struct {
-				ID     string `json:"id"`
-				Name   string `json:"name"`
-				Images []struct {
-					URL string `json:"url"`
-				} `json:"images"`
-			} `json:"items"`
-		} `json:"artists"`
-		Tracks struct {
-			Items []struct {
-				ID      string `json:"id"`
-				Name    string `json:"name"`
-				Artists []struct {
-					Name string `json:"name"`
-				} `json:"artists"`
-				Album struct {
-					Images []struct {
-						URL string `json:"url"`
-					} `json:"images"`
-				} `json:"album"`
-			} `json:"items"`
-		} `json:"tracks"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&spotifyResp); err != nil {
-		writeAPIError(w, "Failed to parse Spotify response", http.StatusInternalServerError)
+		if errors.Is(err, spotifyapi.ErrReauthorizationRequired) {
+			writeAPIErrorWithCode(w, "Spotify authorization expired; reconnect Spotify", "spotify_reauth_required", http.StatusPreconditionRequired)
+			return
+		}
+		log.Printf("Spotify search failed for streamer %d: %v", streamer.ID, err)
+		writeAPIError(w, "Spotify search failed", http.StatusBadGateway)
 		return
 	}
 
 	var results []SpotifySearchResult
 
 	// Process artists
-	for _, artist := range spotifyResp.Artists.Items {
-		result := SpotifySearchResult{
-			ID:   artist.ID,
-			Name: artist.Name,
-			Type: "artist",
+	if spotifyResp.Artists != nil {
+		for _, artist := range spotifyResp.Artists.Artists {
+			result := SpotifySearchResult{
+				ID:   string(artist.ID),
+				Name: artist.Name,
+				Type: "artist",
+			}
+			if len(artist.Images) > 0 {
+				result.Image = artist.Images[0].URL
+			}
+			results = append(results, result)
 		}
-		if len(artist.Images) > 0 {
-			result.Image = artist.Images[0].URL
-		}
-		results = append(results, result)
 	}
 
 	// Process tracks
-	for _, track := range spotifyResp.Tracks.Items {
-		result := SpotifySearchResult{
-			ID:   track.ID,
-			Name: track.Name,
-			Type: "track",
-		}
+	if spotifyResp.Tracks != nil {
+		for _, track := range spotifyResp.Tracks.Tracks {
+			result := SpotifySearchResult{
+				ID:   string(track.ID),
+				Name: track.Name,
+				Type: "track",
+			}
 
-		// Add artist names
-		for _, artist := range track.Artists {
-			result.Artists = append(result.Artists, artist.Name)
-		}
+			// Add artist names
+			for _, artist := range track.Artists {
+				result.Artists = append(result.Artists, artist.Name)
+			}
 
-		// Add album image
-		if len(track.Album.Images) > 0 {
-			result.Image = track.Album.Images[0].URL
-		}
+			// Add album image
+			if len(track.Album.Images) > 0 {
+				result.Image = track.Album.Images[0].URL
+			}
 
-		results = append(results, result)
+			results = append(results, result)
+		}
 	}
 
 	response := SpotifySearchResponse{
@@ -819,6 +797,25 @@ func SpotifySearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeAPIResponse(w, response)
+}
+
+func parseSpotifySearchType(value string) (spotifylib.SearchType, error) {
+	var searchType spotifylib.SearchType
+	for _, item := range strings.Split(value, ",") {
+		switch strings.TrimSpace(item) {
+		case "artist":
+			searchType |= spotifylib.SearchTypeArtist
+		case "track":
+			searchType |= spotifylib.SearchTypeTrack
+		default:
+			return 0, fmt.Errorf("unsupported Spotify search type %q", item)
+		}
+	}
+
+	if searchType == 0 {
+		return 0, fmt.Errorf("at least one Spotify search type is required")
+	}
+	return searchType, nil
 }
 
 // FixRewards attempts to fix/recreate rewards for a user
@@ -1066,6 +1063,10 @@ func writeAPISuccess(w http.ResponseWriter, data interface{}) {
 }
 
 func writeAPIError(w http.ResponseWriter, message string, statusCode int) {
+	writeAPIErrorWithCode(w, message, "", statusCode)
+}
+
+func writeAPIErrorWithCode(w http.ResponseWriter, message, code string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -1074,6 +1075,7 @@ func writeAPIError(w http.ResponseWriter, message string, statusCode int) {
 	response := APIResponse{
 		Success: false,
 		Error:   message,
+		Code:    code,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {

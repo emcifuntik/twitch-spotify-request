@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -41,10 +42,51 @@ func UpdateSpotifyTokensByState(db *gorm.DB, state, accessToken, refreshToken st
 		return result.Error
 	}
 
-	streamer.SpotifyToken = accessToken
-	streamer.SpotifyRefresh = refreshToken
+	authorizedAt := time.Now().UTC()
+	return db.Model(&streamer).Updates(map[string]interface{}{
+		"streamer_spotify_token":           accessToken,
+		"streamer_spotify_refresh":         refreshToken,
+		"streamer_spotify_authorized_at":   authorizedAt,
+		"streamer_spotify_reauth_required": false,
+	}).Error
+}
 
-	return db.Save(&streamer).Error
+// UpdateSpotifyTokens stores tokens returned by a successful refresh. Spotify
+// may omit a replacement refresh token, in which case the existing one is kept.
+func UpdateSpotifyTokens(db *gorm.DB, streamerID uint, accessToken, refreshToken string) error {
+	updates := map[string]interface{}{
+		"streamer_spotify_token":           accessToken,
+		"streamer_spotify_reauth_required": false,
+	}
+	if refreshToken != "" {
+		updates["streamer_spotify_refresh"] = refreshToken
+	}
+
+	return db.Model(&Streamer{}).Where("streamer_id = ?", streamerID).Updates(updates).Error
+}
+
+// InvalidateSpotifyTokens discards an unusable token pair after Spotify returns
+// invalid_grant. The authorization timestamp is retained for diagnostics.
+func InvalidateSpotifyTokens(db *gorm.DB, streamerID uint) error {
+	return db.Model(&Streamer{}).Where("streamer_id = ?", streamerID).Updates(map[string]interface{}{
+		"streamer_spotify_token":           "",
+		"streamer_spotify_refresh":         "",
+		"streamer_spotify_reauth_required": true,
+	}).Error
+}
+
+// UpdateSpotifyState associates a new Spotify OAuth attempt with a logged-in streamer.
+func UpdateSpotifyState(db *gorm.DB, channelID, state string) error {
+	result := db.Model(&Streamer{}).
+		Where("streamer_channel_id = ?", channelID).
+		Update("streamer_spotify_state", state)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetStreamerBySpotifyState finds a streamer by their Spotify state

@@ -83,6 +83,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       async (error) => {
         const originalRequest = error.config
 
+        if (
+          error.response?.status === 428 &&
+          error.response?.data?.code === 'spotify_reauth_required'
+        ) {
+          window.location.href = '/api/spotify/authorize'
+          return Promise.reject(error)
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true
 

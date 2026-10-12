@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: twitch-spotify-request
+    restart: unless-stopped
     environment:
       DB_HOST: "db"
       DB_PORT: "3306"
@@ -23,13 +24,15 @@ services:
       - "traefik.http.routers.catjammusic.tls=true"
       - "traefik.http.services.catjammusic.loadbalancer.server.port=8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - catjam-app-network
 
   db:
     image: mariadb:11.7
     container_name: maria_db
+    restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
       MARIADB_USER: ${DB_USER}
@@ -40,10 +43,11 @@ services:
     networks:
       - catjam-app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
 networks:
   catjam-app-network:
